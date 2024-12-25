@@ -63,31 +63,56 @@ class DetalhesVendaService {
 
   async salvarDetalhesVenda(detalhes) {
     try {
-         await sequelize.sync();
-     // Iterar sobre cada detalhe e salvar
-   for (const detalhe of detalhes) {
-       await DetalhesVenda.upsert({
-           venda_id: detalhe.venda_id,
-          order_item_id: detalhe.order_item_id,
-          date_created: detalhe.date_created,
-            total_amount: detalhe.total_amount,
-            currency_id: detalhe.currency_id,
-           buyer_id: detalhe.buyer_id,
-           buyer_nickname: detalhe.buyer_nickname,
-          status: detalhe.status,
-            shipping_cost: detalhe.shipping_cost,
-            shipping_id: detalhe.shipping_id,
-           height: detalhe.height,
-            width: detalhe.width,
-            length: detalhe.length,
-           weight: detalhe.weight
-      }, { where: {venda_id: detalhe.venda_id, order_item_id: detalhe.order_item_id} });
-          console.log(`Detalhes da venda ${detalhe.venda_id} com item ${detalhe.order_item_id} inseridos ou atualizados com sucesso.`);
-    }
- } catch(error) {
-       console.error('Erro ao salvar os detalhes das vendas:', error);
-      throw error;
-  }
+        // Verificação de tipo antes de iterar
+        if (!Array.isArray(detalhes)) {
+            console.error("Detalhes não é um array, não será iterado:", detalhes);
+            return; // Sai da função sem iterar se não for um array
+        }
+
+
+        for (const detalhe of detalhes) {
+            const {
+              venda_id,
+              order_item_id,
+              date_created,
+              total_amount,
+              currency_id,
+              buyer_id,
+              buyer_nickname,
+              status,
+              shipping_cost,
+              shipping_id,
+              height,
+              width,
+              length,
+              weight,
+            } = detalhe;
+    
+              await DetalhesVenda.findOrCreate({
+              where: { order_item_id },
+                defaults: {
+                venda_id,
+                order_item_id,
+                date_created,
+                total_amount,
+                currency_id,
+                buyer_id,
+                buyer_nickname,
+                status,
+                shipping_cost,
+                shipping_id,
+                height,
+                width,
+                length,
+                weight,
+                },
+               });
+          }
+
+    } catch (error) {
+        console.error("Erro ao salvar os detalhes das vendas:", error);
+         throw error;
+     }
 }
 }
 
