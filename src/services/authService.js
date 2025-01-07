@@ -59,16 +59,16 @@ class AuthService {
         try {
             const response = await fetch('https://api.mercadolibre.com/users/me', {
                 headers: { 'Authorization': `Bearer ${token}` }
-             });
-           const body = await response.json();
-           console.log('validateCurrentToken: Scopes do token:', body.scopes);
-           if (response.status === 200) {
-                return true;
-            }
+            });
+            const body = await response.json();
+            console.log('validateCurrentToken: Scopes do token:', body.scopes);
+            if (response.status === 200) {
+               return true;
+           }
             return false;
-       } catch (error) {
+        } catch (error) {
             console.error('Erro ao validar token:', error);
-             throw { name: 'TokenError', message: error.message };
+           throw { name: 'TokenError', message: error.message };
        }
     }
 
