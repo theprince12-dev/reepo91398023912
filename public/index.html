@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Livre Product App - Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <!-- Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        /* Mobile menu button styles */
+        @media (max-width: 992px) {
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1000;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            
+            .container {
+                padding-top: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+    <div class="d-block d-lg-none">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <span>☰</span>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <h1 class="mt-3 mb-3">Dashboard</h1>
+        
+        <!-- Authentication Status -->
+        <div class="card mb-3">
+            <div class="card-header">Status da Autenticação</div>
+            <div class="card-body">
+                <div id="auth-status">Verificando status da autenticação...</div>
+                <div id="auth-error" class="alert alert-danger" style="display: none;"></div>
+                <div class="mt-2">
+                    <a href="auth.html" class="btn btn-primary">Gerenciar Autenticação</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <h2 class="mt-3 mb-2">Ações Rápidas</h2>
+        <div class="row">
+            <div class="col-4">
+                <div class="card">
+                    <div class="card-header">Vendas</div>
+                    <div class="card-body">
+                        <p>Visualize e gerencie suas vendas recentes.</p>
+                        <a href="sales.html" class="btn btn-primary">Ver Vendas</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card">
+                    <div class="card-header">Produtos</div>
+                    <div class="card-body">
+                        <p>Consulte informações sobre seus produtos.</p>
+                        <a href="products.html" class="btn btn-primary">Ver Produtos</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card">
+                    <div class="card-header">Validação de Frete</div>
+                    <div class="card-body">
+                        <p>Valide o frete para suas vendas.</p>
+                        <div class="d-flex gap-2">
+                            <a href="validacao-simplificada.html" class="btn btn-primary">Tabela Atual</a>
+                            <a href="validacao-frete-2025.html" class="btn btn-success">Tabela 2025</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+                <div class="row mt-3">
+            <div class="col-4">
+                <div class="card">
+                    <div class="card-header">Relatórios de Frete</div>
+                    <div class="card-body">
+                        <p>Analise divergências e gere relatórios de frete.</p>
+                        <a href="freight-reports.html" class="btn btn-primary">Ver Relatórios</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card">
+                    <div class="card-header">Processamento em Lote</div>
+                    <div class="card-body">
+                        <p>Processe múltiplas vendas ou validações em lote.</p>
+                        <a href="batch-results.html" class="btn btn-primary">Processar em Lote</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card">
+                    <div class="card-header">Autenticação</div>
+                    <div class="card-body">
+                        <p>Gerencie a autenticação com o Mercado Livre.</p>
+                        <a href="auth.html" class="btn btn-primary">Configurar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <h2 class="mt-3 mb-2">Atividade Recente</h2>
+        <div class="card">
+            <div class="card-header">Últimas Vendas</div>
+            <div class="card-body">
+                <div id="recent-sales-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                <div id="recent-sales-error" class="alert alert-danger" style="display: none;"></div>
+                <div id="recent-sales">
+                    <p>Carregando vendas recentes...</p>
+                </div>
+                <div class="mt-2">
+                    <a href="sales.html" class="btn btn-secondary">Ver Todas as Vendas</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mt-3 mb-3 text-center">
+        <p>&copy; 2025 Mercado Livre Product App</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/menu.js"></script>
+    <script>
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const authStatus = document.getElementById('auth-status');
+                const authError = document.getElementById('auth-error');
+                
+                const response = await ApiService.testAuth();
+                
+                if (response.success) {
+                    authStatus.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Autenticado!</strong> Seu token de acesso é válido.
+                        </div>
+                    `;
+                } else {
+                    authStatus.innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>Não autenticado!</strong> Você precisa autenticar a aplicação.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                const authStatus = document.getElementById('auth-status');
+                const authError = document.getElementById('auth-error');
+                
+                authStatus.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Erro de autenticação!</strong> Não foi possível verificar o status da autenticação.
+                    </div>
+                `;
+                
+                authError.textContent = `Erro: ${error.message}`;
+                authError.style.display = 'block';
+            }
+        }
+
+        // Load recent sales
+        async function loadRecentSales() {
+            try {
+                Utils.showLoading('recent-sales-loading');
+                
+                // Get current date
+                const today = new Date();
+                
+                // Get date 30 days ago
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(today.getDate() - 30);
+                
+                // Format dates as ISO strings
+                const fromDate = thirtyDaysAgo.toISOString();
+                const toDate = today.toISOString();
+                
+                // Get sales data
+                const response = await ApiService.getAllSales(fromDate, toDate);
+                
+                // Hide loading spinner
+                Utils.hideLoading('recent-sales-loading');
+                
+                // Display sales data
+                const recentSalesElement = document.getElementById('recent-sales');
+                
+                if (response.success) {
+                    if (response.total > 0) {
+                        recentSalesElement.innerHTML = `
+                            <div class="alert alert-success">
+                                <strong>${response.total}</strong> vendas encontradas no período de ${Utils.formatDate(fromDate)} a ${Utils.formatDate(toDate)}.
+                            </div>
+                        `;
+                    } else {
+                        recentSalesElement.innerHTML = `
+                            <div class="alert alert-info">
+                                Nenhuma venda encontrada no período de ${Utils.formatDate(fromDate)} a ${Utils.formatDate(toDate)}.
+                            </div>
+                        `;
+                    }
+                } else {
+                    recentSalesElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível carregar as vendas recentes.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('recent-sales-loading');
+                
+                // Display error message
+                const recentSalesError = document.getElementById('recent-sales-error');
+                recentSalesError.textContent = `Erro ao carregar vendas recentes: ${error.message}`;
+                recentSalesError.style.display = 'block';
+                
+                // Update sales element
+                const recentSalesElement = document.getElementById('recent-sales');
+                recentSalesElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao carregar as vendas recentes.
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication status
+            checkAuthStatus();
+            
+            // Load recent sales
+            loadRecentSales();
+        });
+    </script>
+    
+    <script>
+        // Inicialização do menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    const menuContainer = document.getElementById('floating-menu-container');
+                    if (menuContainer) {
+                        menuContainer.classList.toggle('expanded');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

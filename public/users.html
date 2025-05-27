@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Livre Product App - Usuários</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <!-- Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        /* Mobile menu button styles */
+        @media (max-width: 992px) {
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1000;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            
+            .container {
+                padding-top: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+    <div class="d-block d-lg-none">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <span>☰</span>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <h1 class="mt-3 mb-3">Gerenciamento de Usuários</h1>
+        
+        <!-- Authentication Check -->
+        <div id="auth-check" class="alert alert-warning" style="display: none;">
+            <strong>Atenção!</strong> Você precisa estar autenticado para acessar os dados de usuários. 
+            <a href="auth.html" class="btn btn-primary btn-sm">Autenticar</a>
+        </div>
+        
+        <!-- Current User -->
+        <div class="card mb-3">
+            <div class="card-header">Usuário Atual</div>
+            <div class="card-body">
+                <div id="current-user-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="current-user-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="current-user-details">
+                    <p>Carregando informações do usuário...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Search -->
+        <div class="card mb-3">
+            <div class="card-header">Buscar Usuário</div>
+            <div class="card-body">
+                <form id="user-search-form">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group">
+                                <label for="user-id" class="form-label">ID do Usuário:</label>
+                                <input type="text" id="user-id" class="form-control" placeholder="Ex: 123456789" required>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group" style="margin-top: 32px;">
+                                <button type="submit" class="btn btn-primary">Buscar Usuário</button>
+                                <button type="button" id="clear-search-button" class="btn btn-secondary">Limpar</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- User Results -->
+        <div class="card mb-3" id="user-results-card" style="display: none;">
+            <div class="card-header">Detalhes do Usuário</div>
+            <div class="card-body">
+                <div id="user-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="user-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="user-details"></div>
+            </div>
+        </div>
+        
+        <!-- Grants -->
+        <div class="card mb-3">
+            <div class="card-header">Permissões</div>
+            <div class="card-body">
+                <div id="grants-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="grants-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="grants-details">
+                    <p>Carregando informações de permissões...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mt-3 mb-3 text-center">
+        <p>&copy; 2025 Mercado Livre Product App</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/menu.js"></script>
+    
+    <script>
+        // Inicialização do menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    const menuContainer = document.getElementById('floating-menu-container');
+                    if (menuContainer) {
+                        menuContainer.classList.toggle('expanded');
+                    }
+                });
+            }
+        });
+    </script>
+    <script>
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const response = await ApiService.testAuth();
+                
+                if (!response.success) {
+                    document.getElementById('auth-check').style.display = 'block';
+                }
+                
+                return response.success;
+            } catch (error) {
+                document.getElementById('auth-check').style.display = 'block';
+                return false;
+            }
+        }
+
+        // Load current user
+        async function loadCurrentUser() {
+            try {
+                // Show loading spinner
+                Utils.showLoading('current-user-loading');
+                
+                // Hide error message
+                Utils.hideError('current-user-error');
+                
+                // Get current user data from API
+                const currentUser = await ApiService.getCurrentUser();
+                
+                // Hide loading spinner
+                Utils.hideLoading('current-user-loading');
+                
+                // Display user data
+                const currentUserDetailsElement = document.getElementById('current-user-details');
+                
+                if (currentUser && currentUser.success) {
+                    const userData = currentUser.user || {};
+                    
+                    // Get user details
+                    const userId = userData.id || '';
+                    const nickname = userData.nickname || 'Usuário';
+                    const firstName = userData.first_name || '';
+                    const lastName = userData.last_name || '';
+                    const email = userData.email || 'Não disponível';
+                    const siteStatus = userData.site_status || 'unknown';
+                    
+                    // Get seller reputation
+                    const sellerReputation = userData.seller_reputation || {};
+                    const levelId = sellerReputation.level_id || 'none';
+                    const powerSellerStatus = sellerReputation.power_seller_status || 'none';
+                    
+                    // Get transactions
+                    const transactions = sellerReputation.transactions || {};
+                    const completedTransactions = transactions.completed || 0;
+                    
+                    // Get registration date
+                    const registrationDate = userData.registration_date || new Date().toISOString();
+                    
+                    // Display user details
+                    currentUserDetailsElement.innerHTML = `
+                        <div class="row">
+                            <div class="col-3">
+                                <div class="text-center">
+                                    <div style="width: 100px; height: 100px; background-color: #f5f5f5; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 36px; color: #2d3277; margin-bottom: 10px;">
+                                        ${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}
+                                    </div>
+                                    <p><strong>${nickname}</strong></p>
+                                    <p><span class="badge success">Autenticado</span></p>
+                                </div>
+                            </div>
+                            <div class="col-9">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p><strong>ID:</strong> ${userId}</p>
+                                        <p><strong>Nome:</strong> ${firstName} ${lastName}</p>
+                                        <p><strong>Email:</strong> ${email}</p>
+                                        <p><strong>Status:</strong> ${siteStatus}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p><strong>Reputação:</strong> ${levelId.toUpperCase()}</p>
+                                        <p><strong>Status de Vendedor:</strong> ${powerSellerStatus.toUpperCase()}</p>
+                                        <p><strong>Transações Completadas:</strong> ${completedTransactions}</p>
+                                        <p><strong>Data de Registro:</strong> ${Utils.formatDate(registrationDate)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    currentUserDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível carregar as informações do usuário atual.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('current-user-loading');
+                
+                // Display error message
+                const currentUserError = document.getElementById('current-user-error');
+                currentUserError.textContent = `Erro ao carregar usuário atual: ${error.message}`;
+                currentUserError.style.display = 'block';
+                
+                // Update current user details element
+                const currentUserDetailsElement = document.getElementById('current-user-details');
+                currentUserDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao carregar as informações do usuário atual.
+                    </div>
+                `;
+            }
+        }
+
+        // Get user details
+        async function getUserDetails(userId) {
+            try {
+                // Show loading spinner
+                Utils.showLoading('user-loading');
+                
+                // Hide error message
+                Utils.hideError('user-error');
+                
+                // Show results card
+                document.getElementById('user-results-card').style.display = 'block';
+                
+                // Get user data
+                const user = await ApiService.getUser(userId);
+                
+                // Hide loading spinner
+                Utils.hideLoading('user-loading');
+                
+                // Display user data
+                const userDetailsElement = document.getElementById('user-details');
+                
+                if (user && user.success) {
+                    const userData = user.user || {};
+                    
+                    // Get user details
+                    const id = userData.id || userId;
+                    const nickname = userData.nickname || `USER_${userId}`;
+                    const firstName = userData.first_name || '';
+                    const lastName = userData.last_name || '';
+                    const email = userData.email || 'Não disponível';
+                    const siteStatus = userData.site_status || 'unknown';
+                    
+                    // Get seller reputation
+                    const sellerReputation = userData.seller_reputation || {};
+                    const levelId = sellerReputation.level_id || 'none';
+                    const powerSellerStatus = sellerReputation.power_seller_status || 'none';
+                    
+                    // Get transactions
+                    const transactions = sellerReputation.transactions || {};
+                    const completedTransactions = transactions.completed || 0;
+                    
+                    // Get registration date
+                    const registrationDate = userData.registration_date || new Date().toISOString();
+                    
+                    // Display user details
+                    userDetailsElement.innerHTML = `
+                        <div class="row">
+                            <div class="col-3">
+                                <div class="text-center">
+                                    <div style="width: 100px; height: 100px; background-color: #f5f5f5; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 36px; color: #2d3277; margin-bottom: 10px;">
+                                        ${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}
+                                    </div>
+                                    <p><strong>${nickname}</strong></p>
+                                </div>
+                            </div>
+                            <div class="col-9">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p><strong>ID:</strong> ${id}</p>
+                                        <p><strong>Nome:</strong> ${firstName} ${lastName}</p>
+                                        <p><strong>Email:</strong> ${email}</p>
+                                        <p><strong>Status:</strong> ${siteStatus}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p><strong>Reputação:</strong> ${levelId.toUpperCase()}</p>
+                                        <p><strong>Status de Vendedor:</strong> ${powerSellerStatus.toUpperCase()}</p>
+                                        <p><strong>Transações Completadas:</strong> ${completedTransactions}</p>
+                                        <p><strong>Data de Registro:</strong> ${Utils.formatDate(registrationDate)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    userDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Usuário não encontrado.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('user-loading');
+                
+                // Display error message
+                const userError = document.getElementById('user-error');
+                userError.textContent = `Erro ao buscar usuário: ${error.message}`;
+                userError.style.display = 'block';
+                
+                // Update user details element
+                const userDetailsElement = document.getElementById('user-details');
+                userDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao buscar o usuário.
+                    </div>
+                `;
+            }
+        }
+
+        // Load grants
+        async function loadGrants() {
+            try {
+                // Show loading spinner
+                Utils.showLoading('grants-loading');
+                
+                // Hide error message
+                Utils.hideError('grants-error');
+                
+                // Get grants data
+                const grants = await ApiService.getAllGrants();
+                
+                // Hide loading spinner
+                Utils.hideLoading('grants-loading');
+                
+                // Display grants data
+                const grantsDetailsElement = document.getElementById('grants-details');
+                
+                if (grants && grants.success) {
+                    const grantsData = grants.grants || [];
+                    
+                    if (grantsData.length > 0) {
+                        // Create a summary of permissions
+                        const resourcePermissions = {};
+                        
+                        // Group permissions by resource
+                        grantsData.forEach(grant => {
+                            const resource = grant.resource || 'unknown';
+                            const scope = grant.scope || 'unknown';
+                            
+                            if (!resourcePermissions[resource]) {
+                                resourcePermissions[resource] = [];
+                            }
+                            
+                            if (!resourcePermissions[resource].includes(scope)) {
+                                resourcePermissions[resource].push(scope);
+                            }
+                        });
+                        
+                        // Create summary HTML
+                        let summaryHtml = '';
+                        for (const resource in resourcePermissions) {
+                            const scopes = resourcePermissions[resource].join(' e ');
+                            summaryHtml += `<li><strong>${resource.charAt(0).toUpperCase() + resource.slice(1)}:</strong> ${scopes}</li>`;
+                        }
+                        
+                        // Display grants details
+                        grantsDetailsElement.innerHTML = `
+                            <div class="alert alert-info">
+                                <strong>Permissões</strong> do usuário atual
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Usuário</th>
+                                            <th>Escopo</th>
+                                            <th>Recurso</th>
+                                            <th>Data de Criação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${grantsData.map(grant => `
+                                            <tr>
+                                                <td>${grant.id || 'N/A'}</td>
+                                                <td>${grant.user_id || 'N/A'}</td>
+                                                <td><span class="badge ${grant.scope === 'read' ? 'success' : 'warning'}">${grant.scope || 'N/A'}</span></td>
+                                                <td>${grant.resource || 'N/A'}</td>
+                                                <td>${Utils.formatDate(grant.created_at || new Date().toISOString())}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <h3>Resumo de Permissões</h3>
+                                <p>O usuário atual possui as seguintes permissões:</p>
+                                <ul>
+                                    ${summaryHtml || '<li>Nenhuma permissão encontrada</li>'}
+                                </ul>
+                            </div>
+                        `;
+                    } else {
+                        grantsDetailsElement.innerHTML = `
+                            <div class="alert alert-info">
+                                O usuário atual não possui permissões registradas.
+                            </div>
+                        `;
+                    }
+                } else {
+                    grantsDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível carregar as permissões.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('grants-loading');
+                
+                // Display error message
+                const grantsError = document.getElementById('grants-error');
+                grantsError.textContent = `Erro ao carregar permissões: ${error.message}`;
+                grantsError.style.display = 'block';
+                
+                // Update grants details element
+                const grantsDetailsElement = document.getElementById('grants-details');
+                grantsDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao carregar as permissões.
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check authentication status
+            const isAuthenticated = await checkAuthStatus();
+            
+            if (isAuthenticated) {
+                // Load current user
+                loadCurrentUser();
+                
+                // Load grants
+                loadGrants();
+            }
+            
+            // Add event listener for the user search form
+            document.getElementById('user-search-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                if (!isAuthenticated) {
+                    alert('Você precisa estar autenticado para buscar usuários.');
+                    return;
+                }
+                
+                const userId = document.getElementById('user-id').value.trim();
+                
+                if (userId) {
+                    getUserDetails(userId);
+                }
+            });
+            
+            // Add event listener for the clear search button
+            document.getElementById('clear-search-button').addEventListener('click', function() {
+                document.getElementById('user-id').value = '';
+                document.getElementById('user-results-card').style.display = 'none';
+            });
+            
+            // Check for query parameters
+            const queryParams = Utils.getQueryParams();
+            
+            if (queryParams.user_id) {
+                document.getElementById('user-id').value = queryParams.user_id;
+                getUserDetails(queryParams.user_id);
+            }
+        });
+    </script>
+</body>
+</html>

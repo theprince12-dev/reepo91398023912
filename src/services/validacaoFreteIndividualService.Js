@@ -3,13 +3,12 @@ const fetch = require('node-fetch').default;
 const config = require('../config/mercadoLivre');
 const authService = require('./authService');
 const itemService = require('./itemService');
-const ValidacaoFreteIndividual = require('../models/validacaoFreteIndividualModel');
-const sequelize = require('../config/database');
+const { ValidacaoFreteIndividual } = require('../../models');
 
 class ValidacaoFreteIndividualService {
   async validarFrete(venda_id, accessToken) {
     try {
-         await sequelize.sync();
+        // await sequelize.sync();
         const url = `${config.api_base_url}/orders/${venda_id}`;
          console.log(`validarFrete: URL da requisição - ${url}`);
        const response = await fetch(url, {

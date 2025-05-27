@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Livre - Processamento Manual de Vendas</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <!-- Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        pre.json-result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+        
+        .step-card {
+            border-left: 4px solid #dee2e6;
+            margin-bottom: 20px;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .step-card.active {
+            border-left-color: #0d6efd;
+        }
+        
+        .step-card.completed {
+            border-left-color: #198754;
+        }
+        
+        .step-card.error {
+            border-left-color: #dc3545;
+        }
+        
+        .step-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .processing-steps {
+            counter-reset: step-counter;
+        }
+        
+        .step-card .card-header {
+            position: relative;
+            padding-left: 40px;
+        }
+        
+        .step-card .card-header:before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 26px;
+            height: 26px;
+            background-color: #dee2e6;
+            color: #495057;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .step-card.active .card-header:before {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+        
+        .step-card.completed .card-header:before {
+            background-color: #198754;
+            color: #fff;
+        }
+        
+        .step-card.error .card-header:before {
+            background-color: #dc3545;
+            color: #fff;
+        }
+        
+        .history-list-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+    <div class="d-block d-lg-none">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <span>☰</span>
+        </button>
+    </div>
+
+    <!-- Floating Menu Container (inserido via JS) -->
+    <div id="floating-menu-container" class="floating-menu-container"></div>
+
+    <!-- Main Content -->
+    <main class="container mt-4">
+        <h1 class="text-center mb-4">Processamento Manual de Vendas</h1>
+        <p class="text-center mb-4">
+            Esta página permite o processamento manual e detalhado de vendas, etapa por etapa, com visualização dos resultados intermediários.
+        </p>
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Form para inserir ID da Venda -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h2 class="h5 mb-0">Dados da Venda</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="processingForm">
+                            <div class="mb-3">
+                                <label for="orderId" class="form-label">ID da Venda:</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="orderId" placeholder="Insira o ID da venda para processar" required>
+                                    <button type="submit" class="btn btn-primary">Consultar</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Empty State (Mostrado quando nenhuma venda foi carregada) -->
+                <div id="emptyState" class="card mb-4">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                        <h3 class="h5">Nenhuma venda carregada</h3>
+                        <p class="text-muted">Insira o ID de uma venda para iniciar o processamento manual.</p>
+                    </div>
+                </div>
+                
+                <!-- Loading Container -->
+                <div id="loadingContainer" class="d-none">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p id="loadingMessage">Carregando...</p>
+                    </div>
+                </div>
+                
+                <!-- Error Container -->
+                <div id="errorContainer" class="alert alert-danger d-none">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span id="errorMessage"></span>
+                </div>
+                
+                <!-- Order Details (Mostrado após uma venda ser carregada) -->
+                <div id="orderDetails" class="d-none">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="h5 mb-0">Detalhes da Venda <span id="orderIdDisplay" class="badge bg-primary ms-2"></span></h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Data da Venda:</strong> <span id="orderDate">-</span></p>
+                                    <p><strong>Status:</strong> <span id="orderStatus">-</span></p>
+                                    <p><strong>Total:</strong> <span id="orderTotal">-</span></p>
+                                    <p><strong>Comprador:</strong> <span id="buyerName">-</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Método de Envio:</strong> <span id="shippingMethod">-</span></p>
+                                    <p><strong>ID do Envio:</strong> <span id="shippingId">-</span></p>
+                                    <p><strong>Status do Envio:</strong> <span id="shippingStatus">-</span></p>
+                                    <p><strong>Custo do Envio:</strong> <span id="shippingCost">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="h5 mb-0">Opções de Processamento</h2>
+                        </div>
+                        <div class="card-body d-flex justify-content-between">
+                            <button id="executeAllButton" class="btn btn-primary">
+                                <i class="fas fa-play-circle me-2"></i>Executar Todos os Passos
+                            </button>
+                            <button id="resetButton" class="btn btn-secondary">
+                                <i class="fas fa-redo me-2"></i>Reiniciar Processamento
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Mensagem de conclusão -->
+                    <div id="processingComplete" class="alert alert-success d-none mb-4">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Processamento concluído com sucesso!</strong> Todos os passos foram executados e os dados foram salvos.
+                    </div>
+                    
+                    <!-- Processing Steps -->
+                    <div class="processing-steps">
+                        <!-- Step 1: Obter Dados da Venda -->
+                        <div class="card step-card mb-4">
+                            <div class="card-header">
+                                <div class="step-title">
+                                    <span>Obter Dados da Venda</span>
+                                    <span id="step1Status" class="badge bg-secondary">Pendente</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p>Este passo obtém os dados básicos da venda a partir da API do Mercado Livre.</p>
+                                <button id="step1Button" class="btn btn-outline-primary">Executar Passo 1</button>
+                                <div id="step1Details" class="mt-3 d-none">
+                                    <h6>Resultado:</h6>
+                                    <pre id="step1Result" class="json-result"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2: Obter Itens da Venda -->
+                        <div class="card step-card mb-4">
+                            <div class="card-header">
+                                <div class="step-title">
+                                    <span>Obter Itens da Venda</span>
+                                    <span id="step2Status" class="badge bg-secondary">Pendente</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p>Este passo carrega os itens que compõem a venda e seus detalhes.</p>
+                                <button id="step2Button" class="btn btn-outline-primary" disabled>Executar Passo 2</button>
+                                <div id="step2Details" class="mt-3 d-none">
+                                    <h6>Resultado:</h6>
+                                    <pre id="step2Result" class="json-result"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3: Processar Dados de Envio -->
+                        <div class="card step-card mb-4">
+                            <div class="card-header">
+                                <div class="step-title">
+                                    <span>Processar Dados de Envio</span>
+                                    <span id="step3Status" class="badge bg-secondary">Pendente</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p>Este passo processa os dados de envio, incluindo dimensões e detalhes do pacote.</p>
+                                <button id="step3Button" class="btn btn-outline-primary" disabled>Executar Passo 3</button>
+                                <div id="step3Details" class="mt-3 d-none">
+                                    <h6>Resultado:</h6>
+                                    <pre id="step3Result" class="json-result"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4: Validar Frete -->
+                        <div class="card step-card mb-4">
+                            <div class="card-header">
+                                <div class="step-title">
+                                    <span>Validar Frete</span>
+                                    <span id="step4Status" class="badge bg-secondary">Pendente</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p>Este passo realiza a validação do frete, comparando com tabelas de referência.</p>
+                                <button id="step4Button" class="btn btn-outline-primary" disabled>Executar Passo 4</button>
+                                <div id="step4Details" class="mt-3 d-none">
+                                    <h6>Resultado:</h6>
+                                    <pre id="step4Result" class="json-result"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 5: Finalizar Processamento -->
+                        <div class="card step-card mb-4">
+                            <div class="card-header">
+                                <div class="step-title">
+                                    <span>Finalizar Processamento</span>
+                                    <span id="step5Status" class="badge bg-secondary">Pendente</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p>Este passo finaliza o processamento e salva todos os dados obtidos.</p>
+                                <button id="step5Button" class="btn btn-outline-primary" disabled>Executar Passo 5</button>
+                                <div id="step5Details" class="mt-3 d-none">
+                                    <h6>Resultado:</h6>
+                                    <pre id="step5Result" class="json-result"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Sidebar -->
+            <div class="col-lg-4">
+                <!-- Processing History -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h2 class="h5 mb-0">Histórico de Processamento</h2>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="history-list-container">
+                            <div id="emptyHistory" class="text-center py-4 text-muted">
+                                <i class="fas fa-history fa-2x mb-2"></i>
+                                <p>Nenhum processamento no histórico.</p>
+                            </div>
+                            <div id="historyList" class="list-group list-group-flush">
+                                <!-- Itens do histórico serão adicionados aqui via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Help Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h2 class="h5 mb-0">Ajuda</h2>
+                    </div>
+                    <div class="card-body">
+                        <h6>Como usar:</h6>
+                        <ol>
+                            <li>Insira o ID da venda que deseja processar.</li>
+                            <li>Execute cada passo na sequência ou use "Executar Todos os Passos" para processamento automático.</li>
+                            <li>Observe os resultados de cada etapa para análise detalhada.</li>
+                            <li>Use "Reiniciar Processamento" para limpar os dados e começar de novo.</li>
+                        </ol>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Cada passo depende da conclusão bem-sucedida do anterior. O sistema só permite executar passos na ordem correta.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mt-5 mb-3 text-center">
+        <p>&copy; 2025 Mercado Livre Product App</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/processamento-manual-api.js"></script>
+    <script src="js/processamento-manual.js"></script>
+    <script src="js/components/menu.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+    <script>
+        // Inicialização do menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    const menuContainer = document.getElementById('floating-menu-container');
+                    if (menuContainer) {
+                        menuContainer.classList.toggle('expanded');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seletor de Usuários - Mercado Livre Product App</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        .user-card {
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background-color: white;
+        }
+        
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--box-shadow-lg);
+        }
+        
+        .user-card.selected {
+            border-color: var(--primary-color);
+            background-color: rgba(45, 50, 119, 0.05);
+        }
+        
+        .user-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            margin-right: var(--spacing-md);
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-size: var(--font-size-lg);
+            font-weight: bold;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .user-id {
+            color: var(--secondary-color);
+            font-size: var(--font-size-sm);
+        }
+        
+        .user-details {
+            margin-top: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+        }
+        
+        .user-details p {
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .user-token {
+            background-color: var(--light-color);
+            padding: var(--spacing-sm);
+            border-radius: var(--border-radius-sm);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .user-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: var(--font-size-xs);
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+        }
+        
+        .user-level {
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            background-color: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: var(--border-radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-3">Seletor de Usuários</h1>
+        
+        <div class="card mb-3">
+            <div class="card-header">
+                Usuário Atual
+            </div>
+            <div class="card-body">
+                <div id="current-user-container" class="d-flex align-items-center">
+                    <div class="loading-container" id="current-user-loading">
+                        <div class="loading-spinner"></div>
+                        <p>Carregando informações do usuário...</p>
+                    </div>
+                    <div id="current-user-details" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar" id="current-user-avatar"></div>
+                            <div class="user-info">
+                                <h3 class="user-name" id="current-user-name">Nome do Usuário</h3>
+                                <div class="user-id" id="current-user-id">ID: 123456789</div>
+                                <div class="badge-container" id="current-user-badges"></div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <p><strong>Nickname:</strong> <span id="current-user-nickname">username</span></p>
+                            <p><strong>Status:</strong> <span id="current-user-status">Ativo</span></p>
+                            <p><strong>Tipo de Usuário:</strong> <span id="current-user-type">Vendedor</span></p>
+                            <p><strong>Reputação:</strong> <span id="current-user-reputation">Verde</span></p>
+                        </div>
+                    </div>
+                    <div id="no-current-user" style="display: none;">
+                        <p>Nenhum usuário autenticado no momento.</p>
+                        <a href="auth.html" class="btn btn-primary">Ir para Autenticação</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                Usuários Disponíveis
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-3">
+                    Selecione um usuário para utilizar suas credenciais nos endpoints que requerem autenticação.
+                    Uma vez selecionado, o token deste usuário será utilizado para as operações do Modelo 2025.
+                </div>
+                
+                <div id="saved-users-container">
+                    <div class="loading-container" id="saved-users-loading">
+                        <div class="loading-spinner"></div>
+                        <p>Carregando usuários disponíveis...</p>
+                    </div>
+                    <div id="saved-users-list" style="display: none;"></div>
+                    <div id="no-saved-users" style="display: none;">
+                        <p>Nenhum usuário salvo encontrado.</p>
+                        <a href="auth.html" class="btn btn-primary">Ir para Autenticação</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components/menu.js"></script>
+    <script src="js/user-selector.js"></script>
+    <style>
+        /* Estilos adicionais para mensagens de feedback */
+        .alert-floating {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: var(--border-radius-md);
+            box-shadow: var(--box-shadow-lg);
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .alert-success {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .alert-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .alert-info {
+            background-color: #2196f3;
+            color: white;
+        }
+        
+        /* Adicionar posicionamento relativo para elementos que precisam */
+        .position-relative {
+            position: relative;
+        }
+    </style>
+</body>
+</html>

@@ -1,14 +1,21 @@
 {
   "development": {
+    "dialect": "sqlite",
+     "storage": "src/database.sqlite",
+      "migrationsDir": "migrations",
+     "seederStorage": "sequelize"
+    },
+   "test": {
      "dialect": "sqlite",
-      "storage": "src/database.sqlite"
+     "storage": "src/database.sqlite",
+      "migrationsDir": "migrations",
+     "seederStorage": "sequelize"
+
   },
-  "test": {
-      "dialect": "sqlite",
-     "storage": "src/database.sqlite"
-   },
   "production": {
      "dialect": "sqlite",
-     "storage": "src/database.sqlite"
-   }
+     "storage": "src/database.sqlite",
+     "migrationsDir": "migrations",
+     "seederStorage": "sequelize"
+  }
 }

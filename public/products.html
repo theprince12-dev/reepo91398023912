@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Livre Product App - Produtos</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <!-- Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        /* Mobile menu button styles */
+        @media (max-width: 992px) {
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1000;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            
+            .container {
+                padding-top: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+    <div class="d-block d-lg-none">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <span>☰</span>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <h1 class="mt-3 mb-3">Gerenciamento de Produtos</h1>
+        
+        <!-- Authentication Check -->
+        <div id="auth-check" class="alert alert-warning" style="display: none;">
+            <strong>Atenção!</strong> Você precisa estar autenticado para acessar os dados de produtos. 
+            <a href="auth.html" class="btn btn-primary btn-sm">Autenticar</a>
+        </div>
+        
+        <!-- Product Search -->
+        <div class="card mb-3">
+            <div class="card-header">Buscar Produto</div>
+            <div class="card-body">
+                <form id="product-search-form">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group">
+                                <label for="product-id" class="form-label">ID do Produto:</label>
+                                <input type="text" id="product-id" class="form-control" placeholder="Ex: MLB12345678" required>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group" style="margin-top: 32px;">
+                                <button type="submit" class="btn btn-primary">Buscar Produto</button>
+                                <button type="button" id="clear-search-button" class="btn btn-secondary">Limpar</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Product Results -->
+        <div class="card mb-3" id="product-results-card" style="display: none;">
+            <div class="card-header">Detalhes do Produto</div>
+            <div class="card-body">
+                <div id="product-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="product-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="product-details"></div>
+            </div>
+        </div>
+        
+        <!-- Item Search -->
+        <div class="card mb-3">
+            <div class="card-header">Buscar Item</div>
+            <div class="card-body">
+                <form id="item-search-form">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group">
+                                <label for="item-id" class="form-label">ID do Item:</label>
+                                <input type="text" id="item-id" class="form-control" placeholder="Ex: MLB12345678" required>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group" style="margin-top: 32px;">
+                                <button type="submit" class="btn btn-primary">Buscar Item</button>
+                                <button type="button" id="clear-item-button" class="btn btn-secondary">Limpar</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Item Results -->
+        <div class="card mb-3" id="item-results-card" style="display: none;">
+            <div class="card-header">Detalhes do Item</div>
+            <div class="card-body">
+                <div id="item-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="item-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="item-details"></div>
+            </div>
+        </div>
+        
+        <!-- Listing Prices -->
+        <div class="card mb-3">
+            <div class="card-header">Calcular Taxas de Listagem</div>
+            <div class="card-body">
+                <form id="listing-prices-form">
+                    <div class="row">
+                        <div class="col-3">
+                            <div class="form-group">
+                                <label for="listing-price" class="form-label">Preço:</label>
+                                <input type="number" id="listing-price" class="form-control" placeholder="Ex: 100.00" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="form-group">
+                                <label for="listing-category" class="form-label">Categoria:</label>
+                                <input type="text" id="listing-category" class="form-control" placeholder="Ex: MLB1234" required>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="form-group">
+                                <label for="listing-type" class="form-label">Tipo de Listagem:</label>
+                                <select id="listing-type" class="form-control" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="gold_special">Gold Special</option>
+                                    <option value="gold_pro">Gold Pro</option>
+                                    <option value="gold_premium">Gold Premium</option>
+                                    <option value="gold">Gold</option>
+                                    <option value="silver">Silver</option>
+                                    <option value="bronze">Bronze</option>
+                                    <option value="free">Free</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group" style="margin-top: 32px;">
+                                <button type="submit" class="btn btn-primary">Calcular Taxas</button>
+                                <button type="button" id="clear-listing-button" class="btn btn-secondary">Limpar</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Listing Prices Results -->
+        <div class="card mb-3" id="listing-results-card" style="display: none;">
+            <div class="card-header">Taxas de Listagem</div>
+            <div class="card-body">
+                <div id="listing-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="listing-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="listing-details"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mt-3 mb-3 text-center">
+        <p>&copy; 2025 Mercado Livre Product App</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/menu.js"></script>
+    
+    <script>
+        // Inicialização do menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    const menuContainer = document.getElementById('floating-menu-container');
+                    if (menuContainer) {
+                        menuContainer.classList.toggle('expanded');
+                    }
+                });
+            }
+        });
+    </script>
+    <script>
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const response = await ApiService.testAuth();
+                
+                if (!response.success) {
+                    document.getElementById('auth-check').style.display = 'block';
+                }
+                
+                return response.success;
+            } catch (error) {
+                document.getElementById('auth-check').style.display = 'block';
+                return false;
+            }
+        }
+
+        // Get product details
+        async function getProductDetails(productId) {
+            try {
+                // Show loading spinner
+                Utils.showLoading('product-loading');
+                
+                // Hide error message
+                Utils.hideError('product-error');
+                
+                // Show results card
+                document.getElementById('product-results-card').style.display = 'block';
+                
+                // Get product data
+                const product = await ApiService.getProduct(productId);
+                
+                // Hide loading spinner
+                Utils.hideLoading('product-loading');
+                
+                // Display product data
+                const productDetailsElement = document.getElementById('product-details');
+                
+                if (product) {
+                    // Display product details using real data
+                    const thumbnail = product.thumbnail || 'https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLA12345678901_022021-F.jpg';
+                    const freeShipping = product.shipping && product.shipping.free_shipping ? 'Sim' : 'Não';
+                    const sellerInfo = product.seller ? 
+                        `${product.seller.nickname} (ID: ${product.seller.id})` : 
+                        'Informação não disponível';
+                    
+                    productDetailsElement.innerHTML = `
+                        <div class="row">
+                            <div class="col-4">
+                                <img src="${thumbnail}" alt="${product.title}" class="img-fluid">
+                            </div>
+                            <div class="col-8">
+                                <h2>${product.title}</h2>
+                                <p class="text-muted">${product.id}</p>
+                                <h3>${Utils.formatCurrency(product.price)}</h3>
+                                <p><strong>Quantidade disponível:</strong> ${product.available_quantity}</p>
+                                <p><strong>Condição:</strong> ${product.condition === 'new' ? 'Novo' : 'Usado'}</p>
+                                <p><strong>Tipo de listagem:</strong> ${product.listing_type_id}</p>
+                                <p><strong>Categoria:</strong> ${product.category_id}</p>
+                                <p><strong>Frete grátis:</strong> ${freeShipping}</p>
+                                <p><strong>Vendedor:</strong> ${sellerInfo}</p>
+                                <a href="${product.permalink}" target="_blank" class="btn btn-primary">Ver no Mercado Livre</a>
+                                
+                                <div class="mt-3">
+                                    <button class="btn btn-secondary" onclick="getProductDescription('${product.id}')">Ver Descrição</button>
+                                    <button class="btn btn-secondary" onclick="getProductVariations('${product.id}')">Ver Variações</button>
+                                    <button class="btn btn-secondary" onclick="getProductImages('${product.id}')">Ver Imagens</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="product-additional-info" class="mt-3"></div>
+                    `;
+                } else {
+                    productDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Produto não encontrado.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('product-loading');
+                
+                // Display error message
+                const productError = document.getElementById('product-error');
+                productError.textContent = `Erro ao buscar produto: ${error.message}`;
+                productError.style.display = 'block';
+                
+                // Update product details element
+                const productDetailsElement = document.getElementById('product-details');
+                productDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao buscar o produto.
+                    </div>
+                `;
+            }
+        }
+
+        // Get item details
+        async function getItemDetails(itemId) {
+            try {
+                // Show loading spinner
+                Utils.showLoading('item-loading');
+                
+                // Hide error message
+                Utils.hideError('item-error');
+                
+                // Show results card
+                document.getElementById('item-results-card').style.display = 'block';
+                
+                // Get item data
+                const item = await ApiService.getItem(itemId);
+                
+                // Hide loading spinner
+                Utils.hideLoading('item-loading');
+                
+                // Display item data
+                const itemDetailsElement = document.getElementById('item-details');
+                
+                if (item) {
+                    // Display item details using real data
+                    const thumbnail = item.thumbnail || 'https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLA12345678901_022021-F.jpg';
+                    const freeShipping = item.shipping && item.shipping.free_shipping ? 'Sim' : 'Não';
+                    const sellerInfo = item.seller ? 
+                        `${item.seller.nickname} (ID: ${item.seller.id})` : 
+                        'Informação não disponível';
+                    
+                    // Get attributes
+                    const attributes = item.attributes || [];
+                    const attributesHtml = attributes.length > 0 ? 
+                        attributes.map(attr => `
+                            <tr>
+                                <td>${attr.name}</td>
+                                <td>${attr.value_name}</td>
+                            </tr>
+                        `).join('') : 
+                        '<tr><td colspan="2">Nenhum atributo disponível</td></tr>';
+                    
+                    itemDetailsElement.innerHTML = `
+                        <div class="row">
+                            <div class="col-4">
+                                <img src="${thumbnail}" alt="${item.title}" class="img-fluid">
+                            </div>
+                            <div class="col-8">
+                                <h2>${item.title}</h2>
+                                <p class="text-muted">${item.id}</p>
+                                <h3>${Utils.formatCurrency(item.price)}</h3>
+                                <p><strong>Quantidade disponível:</strong> ${item.available_quantity}</p>
+                                <p><strong>Condição:</strong> ${item.condition === 'new' ? 'Novo' : 'Usado'}</p>
+                                <p><strong>Tipo de listagem:</strong> ${item.listing_type_id}</p>
+                                <p><strong>Categoria:</strong> ${item.category_id}</p>
+                                <p><strong>Frete grátis:</strong> ${freeShipping}</p>
+                                <p><strong>Vendedor:</strong> ${sellerInfo}</p>
+                                <a href="${item.permalink}" target="_blank" class="btn btn-primary">Ver no Mercado Livre</a>
+                            </div>
+                        </div>
+                        
+                        <h3 class="mt-3">Atributos</h3>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${attributesHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    itemDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Item não encontrado.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('item-loading');
+                
+                // Display error message
+                const itemError = document.getElementById('item-error');
+                itemError.textContent = `Erro ao buscar item: ${error.message}`;
+                itemError.style.display = 'block';
+                
+                // Update item details element
+                const itemDetailsElement = document.getElementById('item-details');
+                itemDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao buscar o item.
+                    </div>
+                `;
+            }
+        }
+
+        // Get listing prices
+        async function getListingPrices(price, categoryId, listingTypeId) {
+            try {
+                // Show loading spinner
+                Utils.showLoading('listing-loading');
+                
+                // Hide error message
+                Utils.hideError('listing-error');
+                
+                // Show results card
+                document.getElementById('listing-results-card').style.display = 'block';
+                
+                // Get listing prices data
+                const listingPrices = await ApiService.getListingPrices(price, categoryId, listingTypeId);
+                
+                // Hide loading spinner
+                Utils.hideLoading('listing-loading');
+                
+                // Display listing prices data
+                const listingDetailsElement = document.getElementById('listing-details');
+                
+                if (listingPrices) {
+                    // Display listing prices details using real data
+                    const feeDetails = listingPrices.sale_fee_details || {};
+                    const percentageFee = feeDetails.percentage_fee || 0;
+                    const fixedFee = feeDetails.fixed_fee || 0;
+                    const grossAmount = feeDetails.gross_amount || parseFloat(price);
+                    const finalAmount = feeDetails.final_amount || (grossAmount - (grossAmount * percentageFee) - fixedFee);
+                    const totalFees = grossAmount - finalAmount;
+                    
+                    listingDetailsElement.innerHTML = `
+                        <div class="alert alert-info">
+                            <p><strong>Preço:</strong> ${Utils.formatCurrency(parseFloat(price))}</p>
+                            <p><strong>Categoria:</strong> ${categoryId}</p>
+                            <p><strong>Tipo de Listagem:</strong> ${listingTypeId}</p>
+                        </div>
+                        
+                        <h3>Detalhes das Taxas</h3>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th>Taxa Percentual:</th>
+                                        <td>${(percentageFee * 100).toFixed(2)}%</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Taxa Fixa:</th>
+                                        <td>${Utils.formatCurrency(fixedFee)}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Valor Bruto:</th>
+                                        <td>${Utils.formatCurrency(grossAmount)}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Valor Final (após taxas):</th>
+                                        <td>${Utils.formatCurrency(finalAmount)}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Total de Taxas:</th>
+                                        <td>${Utils.formatCurrency(totalFees)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    listingDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível calcular as taxas de listagem.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('listing-loading');
+                
+                // Display error message
+                const listingError = document.getElementById('listing-error');
+                listingError.textContent = `Erro ao calcular taxas de listagem: ${error.message}`;
+                listingError.style.display = 'block';
+                
+                // Update listing details element
+                const listingDetailsElement = document.getElementById('listing-details');
+                listingDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao calcular as taxas de listagem.
+                    </div>
+                `;
+            }
+        }
+
+        // Get product description
+        async function getProductDescription(productId) {
+            try {
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div></div>';
+                
+                const description = await ApiService.getProductDescription(productId);
+                
+                if (description && description.plain_text) {
+                    additionalInfoElement.innerHTML = `
+                        <div class="card">
+                            <div class="card-header">Descrição do Produto</div>
+                            <div class="card-body">
+                                <p>${description.plain_text.replace(/\n/g, '<br>')}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    additionalInfoElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Descrição não encontrada para este produto.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Erro ao buscar descrição: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Get product variations
+        async function getProductVariations(productId) {
+            try {
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div></div>';
+                
+                const variations = await ApiService.getProductVariations(productId);
+                
+                if (variations && variations.length > 0) {
+                    let variationsHtml = `
+                        <div class="card">
+                            <div class="card-header">Variações do Produto (${variations.length})</div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Atributos</th>
+                                                <th>Preço</th>
+                                                <th>Quantidade</th>
+                                                <th>Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                    `;
+                    
+                    variations.forEach(variation => {
+                        const attributes = variation.attribute_combinations || [];
+                        const attributesText = attributes.map(attr => `${attr.name}: ${attr.value_name}`).join('<br>');
+                        
+                        variationsHtml += `
+                            <tr>
+                                <td>${variation.id}</td>
+                                <td>${attributesText}</td>
+                                <td>${Utils.formatCurrency(variation.price)}</td>
+                                <td>${variation.available_quantity}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="updateProductVariation('${productId}', '${variation.id}')">Editar</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteProductVariation('${productId}', '${variation.id}')">Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    variationsHtml += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <button class="btn btn-primary" onclick="showAddVariationForm('${productId}')">Adicionar Variação</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    additionalInfoElement.innerHTML = variationsHtml;
+                } else {
+                    additionalInfoElement.innerHTML = `
+                        <div class="alert alert-info">
+                            Este produto não possui variações.
+                            <button class="btn btn-primary btn-sm ml-3" onclick="showAddVariationForm('${productId}')">Adicionar Variação</button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Erro ao buscar variações: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Get product images
+        async function getProductImages(productId) {
+            try {
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div></div>';
+                
+                const images = await ApiService.getProductImages(productId);
+                
+                if (images && images.length > 0) {
+                    let imagesHtml = `
+                        <div class="card">
+                            <div class="card-header">Imagens do Produto (${images.length})</div>
+                            <div class="card-body">
+                                <div class="row">
+                    `;
+                    
+                    images.forEach(image => {
+                        imagesHtml += `
+                            <div class="col-md-3 mb-3">
+                                <div class="card">
+                                    <img src="${image.url}" alt="Imagem do produto" class="card-img-top">
+                                    <div class="card-body text-center">
+                                        <button class="btn btn-sm btn-danger" onclick="deleteProductImage('${productId}', '${image.id}')">Excluir</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    imagesHtml += `
+                                </div>
+                                <div class="mt-3">
+                                    <button class="btn btn-primary" onclick="showAddImageForm('${productId}')">Adicionar Imagem</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    additionalInfoElement.innerHTML = imagesHtml;
+                } else {
+                    additionalInfoElement.innerHTML = `
+                        <div class="alert alert-info">
+                            Este produto não possui imagens.
+                            <button class="btn btn-primary btn-sm ml-3" onclick="showAddImageForm('${productId}')">Adicionar Imagem</button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Erro ao buscar imagens: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Show add variation form
+        function showAddVariationForm(productId) {
+            const additionalInfoElement = document.getElementById('product-additional-info');
+            additionalInfoElement.innerHTML = `
+                <div class="card">
+                    <div class="card-header">Adicionar Variação</div>
+                    <div class="card-body">
+                        <form id="add-variation-form">
+                            <div class="form-group">
+                                <label for="variation-attribute-name">Nome do Atributo:</label>
+                                <input type="text" id="variation-attribute-name" class="form-control" placeholder="Ex: Cor, Tamanho, etc." required>
+                            </div>
+                            <div class="form-group">
+                                <label for="variation-attribute-value">Valor do Atributo:</label>
+                                <input type="text" id="variation-attribute-value" class="form-control" placeholder="Ex: Vermelho, G, etc." required>
+                            </div>
+                            <div class="form-group">
+                                <label for="variation-price">Preço:</label>
+                                <input type="number" id="variation-price" class="form-control" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="variation-quantity">Quantidade:</label>
+                                <input type="number" id="variation-quantity" class="form-control" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="addProductVariation('${productId}')">Salvar</button>
+                                <button type="button" class="btn btn-secondary" onclick="getProductVariations('${productId}')">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add product variation
+        async function addProductVariation(productId) {
+            try {
+                const attributeName = document.getElementById('variation-attribute-name').value;
+                const attributeValue = document.getElementById('variation-attribute-value').value;
+                const price = document.getElementById('variation-price').value;
+                const quantity = document.getElementById('variation-quantity').value;
+                
+                if (!attributeName || !attributeValue || !price || !quantity) {
+                    alert('Por favor, preencha todos os campos.');
+                    return;
+                }
+                
+                const variationData = {
+                    attribute_combinations: [
+                        {
+                            name: attributeName,
+                            value_name: attributeValue
+                        }
+                    ],
+                    price: parseFloat(price),
+                    available_quantity: parseInt(quantity)
+                };
+                
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div></div>';
+                
+                await ApiService.addProductVariation(productId, variationData);
+                
+                // Reload variations
+                getProductVariations(productId);
+            } catch (error) {
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Erro ao adicionar variação: ${error.message}
+                    </div>
+                    <button class="btn btn-primary" onclick="getProductVariations('${productId}')">Voltar</button>
+                `;
+            }
+        }
+        
+        // Delete product variation
+        async function deleteProductVariation(productId, variationId) {
+            if (confirm('Tem certeza que deseja excluir esta variação?')) {
+                try {
+                    const additionalInfoElement = document.getElementById('product-additional-info');
+                    additionalInfoElement.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div></div>';
+                    
+                    await ApiService.deleteProductVariation(productId, variationId);
+                    
+                    // Reload variations
+                    getProductVariations(productId);
+                } catch (error) {
+                    const additionalInfoElement = document.getElementById('product-additional-info');
+                    additionalInfoElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            Erro ao excluir variação: ${error.message}
+                        </div>
+                        <button class="btn btn-primary" onclick="getProductVariations('${productId}')">Voltar</button>
+                    `;
+                }
+            }
+        }
+        
+        // Show add image form
+        function showAddImageForm(productId) {
+            const additionalInfoElement = document.getElementById('product-additional-info');
+            additionalInfoElement.innerHTML = `
+                <div class="card">
+                    <div class="card-header">Adicionar Imagem</div>
+                    <div class="card-body">
+                        <form id="add-image-form">
+                            <div class="form-group">
+                                <label for="image-url">URL da Imagem:</label>
+                                <input type="url" id="image-url" class="form-control" placeholder="https://exemplo.com/imagem.jpg" required>
+                            </div>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="uploadProductImage('${productId}')">Salvar</button>
+                                <button type="button" class="btn btn-secondary" onclick="getProductImages('${productId}')">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Upload product image
+        async function uploadProductImage(productId) {
+            try {
+                const imageUrl = document.getElementById('image-url').value;
+                
+                if (!imageUrl) {
+                    alert('Por favor, informe a URL da imagem.');
+                    return;
+                }
+                
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div></div>';
+                
+                await ApiService.uploadProductImageByUrl(productId, imageUrl);
+                
+                // Reload images
+                getProductImages(productId);
+            } catch (error) {
+                const additionalInfoElement = document.getElementById('product-additional-info');
+                additionalInfoElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Erro ao adicionar imagem: ${error.message}
+                    </div>
+                    <button class="btn btn-primary" onclick="getProductImages('${productId}')">Voltar</button>
+                `;
+            }
+        }
+        
+        // Delete product image
+        async function deleteProductImage(productId, imageId) {
+            if (confirm('Tem certeza que deseja excluir esta imagem?')) {
+                try {
+                    const additionalInfoElement = document.getElementById('product-additional-info');
+                    additionalInfoElement.innerHTML = '<div class="loading-container"><div class="loading-spinner"></div></div>';
+                    
+                    await ApiService.deleteProductImage(productId, imageId);
+                    
+                    // Reload images
+                    getProductImages(productId);
+                } catch (error) {
+                    const additionalInfoElement = document.getElementById('product-additional-info');
+                    additionalInfoElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            Erro ao excluir imagem: ${error.message}
+                        </div>
+                        <button class="btn btn-primary" onclick="getProductImages('${productId}')">Voltar</button>
+                    `;
+                }
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check authentication status
+            const isAuthenticated = await checkAuthStatus();
+            
+            // Add event listener for the product search form
+            document.getElementById('product-search-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                if (!isAuthenticated) {
+                    alert('Você precisa estar autenticado para buscar produtos.');
+                    return;
+                }
+                
+                const productId = document.getElementById('product-id').value.trim();
+                
+                if (productId) {
+                    getProductDetails(productId);
+                }
+            });
+            
+            // Add event listener for the clear product search button
+            document.getElementById('clear-search-button').addEventListener('click', function() {
+                document.getElementById('product-id').value = '';
+                document.getElementById('product-results-card').style.display = 'none';
+            });
+            
+            // Add event listener for the item search form
+            document.getElementById('item-search-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                if (!isAuthenticated) {
+                    alert('Você precisa estar autenticado para buscar itens.');
+                    return;
+                }
+                
+                const itemId = document.getElementById('item-id').value.trim();
+                
+                if (itemId) {
+                    getItemDetails(itemId);
+                }
+            });
+            
+            // Add event listener for the clear item search button
+            document.getElementById('clear-item-button').addEventListener('click', function() {
+                document.getElementById('item-id').value = '';
+                document.getElementById('item-results-card').style.display = 'none';
+            });
+            
+            // Add event listener for the listing prices form
+            document.getElementById('listing-prices-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                if (!isAuthenticated) {
+                    alert('Você precisa estar autenticado para calcular taxas de listagem.');
+                    return;
+                }
+                
+                const price = document.getElementById('listing-price').value.trim();
+                const categoryId = document.getElementById('listing-category').value.trim();
+                const listingTypeId = document.getElementById('listing-type').value;
+                
+                if (price && categoryId && listingTypeId) {
+                    getListingPrices(price, categoryId, listingTypeId);
+                }
+            });
+            
+            // Add event listener for the clear listing prices button
+            document.getElementById('clear-listing-button').addEventListener('click', function() {
+                document.getElementById('listing-price').value = '';
+                document.getElementById('listing-category').value = '';
+                document.getElementById('listing-type').value = '';
+                document.getElementById('listing-results-card').style.display = 'none';
+            });
+            
+            // Check for query parameters
+            const queryParams = Utils.getQueryParams();
+            
+            if (queryParams.product_id) {
+                document.getElementById('product-id').value = queryParams.product_id;
+                getProductDetails(queryParams.product_id);
+            }
+            
+            if (queryParams.item_id) {
+                document.getElementById('item-id').value = queryParams.item_id;
+                getItemDetails(queryParams.item_id);
+            }
+        });
+    </script>
+</body>
+</html>

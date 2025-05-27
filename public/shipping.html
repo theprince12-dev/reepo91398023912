@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Livre Product App - Validação de Frete</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <!-- Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        /* Mobile menu button styles */
+        @media (max-width: 992px) {
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1000;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            
+            .container {
+                padding-top: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+    <div class="d-block d-lg-none">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <span>☰</span>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <h1 class="mt-3 mb-3">Validação de Frete</h1>
+        
+        <!-- Authentication Check -->
+        <div id="auth-check" class="alert alert-warning" style="display: none;">
+            <strong>Atenção!</strong> Você precisa estar autenticado para validar fretes. 
+            <a href="auth.html" class="btn btn-primary btn-sm">Autenticar</a>
+        </div>
+        
+        <!-- Shipping Validation Form -->
+        <div class="card mb-3">
+            <div class="card-header">Validar Frete de Venda</div>
+            <div class="card-body">
+                <form id="shipping-validation-form">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="form-group">
+                                <label for="sale-id" class="form-label">ID da Venda:</label>
+                                <input type="text" id="sale-id" class="form-control" placeholder="Ex: ML12345678" required>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group" style="margin-top: 32px;">
+                                <button type="submit" class="btn btn-primary">Validar Frete</button>
+                                <button type="button" id="clear-validation-button" class="btn btn-secondary">Limpar</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Validation Results -->
+        <div class="card mb-3" id="validation-results-card" style="display: none;">
+            <div class="card-header">Resultados da Validação</div>
+            <div class="card-body">
+                <div id="validation-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="validation-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="validation-details"></div>
+            </div>
+        </div>
+        
+        <!-- Package Dimensions -->
+        <div class="card mb-3" id="package-dimensions-card" style="display: none;">
+            <div class="card-header">Dimensões do Pacote</div>
+            <div class="card-body">
+                <div id="dimensions-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="dimensions-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="dimensions-details"></div>
+            </div>
+        </div>
+        
+        <!-- Shipping Rates -->
+        <div class="card mb-3" id="shipping-rates-card" style="display: none;">
+            <div class="card-header">Tabela de Fretes</div>
+            <div class="card-body">
+                <div id="rates-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="rates-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="rates-details"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mt-3 mb-3 text-center">
+        <p>&copy; 2025 Mercado Livre Product App</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/menu.js"></script>
+    
+    <script>
+        // Inicialização do menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    const menuContainer = document.getElementById('floating-menu-container');
+                    if (menuContainer) {
+                        menuContainer.classList.toggle('expanded');
+                    }
+                });
+            }
+        });
+    </script>
+    <script>
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const response = await ApiService.testAuth();
+                
+                if (!response.success) {
+                    document.getElementById('auth-check').style.display = 'block';
+                }
+                
+                return response.success;
+            } catch (error) {
+                document.getElementById('auth-check').style.display = 'block';
+                return false;
+            }
+        }
+
+        // Validate shipping for a sale
+        async function validateShipping(saleId) {
+            try {
+                // Show loading spinner
+                Utils.showLoading('validation-loading');
+                
+                // Hide error message
+                Utils.hideError('validation-error');
+                
+                // Show results card
+                document.getElementById('validation-results-card').style.display = 'block';
+                
+                // Get validation data
+                const validation = await ApiService.validateFrete(saleId);
+                
+                // Hide loading spinner
+                Utils.hideLoading('validation-loading');
+                
+                // Display validation data
+                const validationDetailsElement = document.getElementById('validation-details');
+                
+                if (validation && validation.success) {
+                    // Use real data from the API
+                    const validacaoData = validation.validacao || {};
+                    const shipmentId = validacaoData.shipment_id || '';
+                    const status = validacaoData.status || 'DESCONHECIDO';
+                    const freteCobrado = validacaoData.valor_frete_cobrado || 0;
+                    const freteCalculado = validacaoData.valor_frete_calculado || 0;
+                    const diferenca = validacaoData.diferenca || 0;
+                    
+                    // Calculate if the difference is acceptable
+                    const isDifferenceAcceptable = Math.abs(diferenca) < 5;
+                    
+                    // Display validation details
+                    validationDetailsElement.innerHTML = `
+                        <div class="alert ${status === 'OK' ? 'alert-success' : 'alert-warning'}">
+                            <strong>${status === 'OK' ? 'Frete Válido!' : 'Atenção!'}</strong> 
+                            ${validation.message || `Frete da venda ${saleId} validado.`}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col">
+                                <h3>Detalhes da Validação</h3>
+                                <p><strong>ID da Venda:</strong> ${validacaoData.venda_id || saleId}</p>
+                                <p><strong>ID do Envio:</strong> ${shipmentId}</p>
+                                <p><strong>Status:</strong> <span class="badge ${status === 'OK' ? 'success' : 'warning'}">${status}</span></p>
+                            </div>
+                            <div class="col">
+                                <h3>Valores</h3>
+                                <p><strong>Frete Cobrado:</strong> ${Utils.formatCurrency(freteCobrado)}</p>
+                                <p><strong>Frete Calculado:</strong> ${Utils.formatCurrency(freteCalculado)}</p>
+                                <p><strong>Diferença:</strong> <span class="${isDifferenceAcceptable ? 'text-success' : 'text-danger'}">${Utils.formatCurrency(diferenca)}</span></p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Get package dimensions
+                    getPackageDimensions(shipmentId);
+                    
+                    // Show shipping rates
+                    showShippingRates();
+                } else {
+                    validationDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível validar o frete para a venda ${saleId}.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('validation-loading');
+                
+                // Display error message
+                const validationError = document.getElementById('validation-error');
+                validationError.textContent = `Erro ao validar frete: ${error.message}`;
+                validationError.style.display = 'block';
+                
+                // Update validation details element
+                const validationDetailsElement = document.getElementById('validation-details');
+                validationDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao validar o frete.
+                    </div>
+                `;
+            }
+        }
+
+        // Get package dimensions
+        async function getPackageDimensions(shipmentId) {
+            try {
+                // Show package dimensions card
+                document.getElementById('package-dimensions-card').style.display = 'block';
+                
+                // Show loading spinner
+                Utils.showLoading('dimensions-loading');
+                
+                // Hide error message
+                Utils.hideError('dimensions-error');
+                
+                // Get shipment data from API
+                const shipment = await ApiService.getShipment(shipmentId);
+                
+                // Hide loading spinner
+                Utils.hideLoading('dimensions-loading');
+                
+                // Display dimensions data
+                const dimensionsDetailsElement = document.getElementById('dimensions-details');
+                
+                if (shipment && shipment.success) {
+                    // Get package dimensions from API response
+                    const dimensaoPacote = shipment.dimensaoPacote || {};
+                    const height = dimensaoPacote.height || 0;
+                    const width = dimensaoPacote.width || 0;
+                    const length = dimensaoPacote.length || 0;
+                    const weight = dimensaoPacote.weight || 0;
+                    
+                    // Calculate cubic weight
+                    const cubicWeight = (height * width * length) / 6000;
+                    
+                    dimensionsDetailsElement.innerHTML = `
+                        <div class="alert alert-info">
+                            <strong>Dimensões do Pacote</strong> para o envio ${shipmentId}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col">
+                                <h3>Dimensões</h3>
+                                <p><strong>Altura:</strong> ${height.toFixed(2)} cm</p>
+                                <p><strong>Largura:</strong> ${width.toFixed(2)} cm</p>
+                                <p><strong>Comprimento:</strong> ${length.toFixed(2)} cm</p>
+                            </div>
+                            <div class="col">
+                                <h3>Peso</h3>
+                                <p><strong>Peso Total:</strong> ${weight.toFixed(2)} g</p>
+                                <p><strong>Peso em kg:</strong> ${(weight / 1000).toFixed(2)} kg</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h3>Cálculo de Peso Cúbico</h3>
+                            <p>O peso cúbico é calculado com base nas dimensões do pacote.</p>
+                            <p><strong>Fórmula:</strong> (Altura x Largura x Comprimento) / 6000</p>
+                            <p><strong>Cálculo:</strong> (${height.toFixed(2)} x ${width.toFixed(2)} x ${length.toFixed(2)}) / 6000 = ${cubicWeight.toFixed(2)} kg</p>
+                        </div>
+                    `;
+                } else {
+                    dimensionsDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível obter as dimensões do pacote para o envio ${shipmentId}.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('dimensions-loading');
+                
+                // Display error message
+                const dimensionsError = document.getElementById('dimensions-error');
+                dimensionsError.textContent = `Erro ao obter dimensões do pacote: ${error.message}`;
+                dimensionsError.style.display = 'block';
+                
+                // Update dimensions details element
+                const dimensionsDetailsElement = document.getElementById('dimensions-details');
+                dimensionsDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao obter as dimensões do pacote.
+                    </div>
+                `;
+            }
+        }
+
+        // Show shipping rates
+        async function showShippingRates() {
+            try {
+                // Show shipping rates card
+                document.getElementById('shipping-rates-card').style.display = 'block';
+                
+                // Show loading spinner
+                Utils.showLoading('rates-loading');
+                
+                // Hide error message
+                Utils.hideError('rates-error');
+                
+                // Get shipping rates from API
+                const shippingRates = await ApiService.getShippingRates();
+                
+                // Hide loading spinner
+                Utils.hideLoading('rates-loading');
+                
+                if (shippingRates && shippingRates.success) {
+                    const rates = shippingRates.rates || [];
+                    
+                    // Display shipping rates data
+                    const ratesDetailsElement = document.getElementById('rates-details');
+                    
+                    // Filter rates by region
+                    const sulSudesteRates = rates.filter(rate => rate.region === 'Sul/Sudeste');
+                    const outrasRates = rates.filter(rate => rate.region === 'Outras');
+                    
+                    ratesDetailsElement.innerHTML = `
+                        <div class="alert alert-info">
+                            <strong>Tabela de Fretes</strong> para referência
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                <h3>Sul/Sudeste</h3>
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Tipo</th>
+                                                <th>Peso Mínimo (g)</th>
+                                                <th>Peso Máximo (g)</th>
+                                                <th>Preço</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${sulSudesteRates.length > 0 ? 
+                                                sulSudesteRates.map(rate => `
+                                                    <tr>
+                                                        <td>${rate.type}</td>
+                                                        <td>${rate.weight_min}</td>
+                                                        <td>${rate.weight_max}</td>
+                                                        <td>${Utils.formatCurrency(rate.price)}</td>
+                                                    </tr>
+                                                `).join('') : 
+                                                '<tr><td colspan="4">Nenhuma taxa disponível</td></tr>'
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h3>Outras Regiões</h3>
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Tipo</th>
+                                                <th>Peso Mínimo (g)</th>
+                                                <th>Peso Máximo (g)</th>
+                                                <th>Preço</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${outrasRates.length > 0 ? 
+                                                outrasRates.map(rate => `
+                                                    <tr>
+                                                        <td>${rate.type}</td>
+                                                        <td>${rate.weight_min}</td>
+                                                        <td>${rate.weight_max}</td>
+                                                        <td>${Utils.formatCurrency(rate.price)}</td>
+                                                    </tr>
+                                                `).join('') : 
+                                                '<tr><td colspan="4">Nenhuma taxa disponível</td></tr>'
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h3>Observações</h3>
+                            <ul>
+                                <li>Produtos especiais incluem eletrônicos, frágeis e itens de alto valor.</li>
+                                <li>Para pacotes acima de 2kg, consulte a tabela completa.</li>
+                                <li>Valores sujeitos a alterações conforme a política do Mercado Livre.</li>
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    // Display error message if no rates are available
+                    const ratesDetailsElement = document.getElementById('rates-details');
+                    ratesDetailsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível obter a tabela de fretes.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('rates-loading');
+                
+                // Display error message
+                const ratesError = document.getElementById('rates-error');
+                ratesError.textContent = `Erro ao obter tabela de fretes: ${error.message}`;
+                ratesError.style.display = 'block';
+                
+                // Update rates details element
+                const ratesDetailsElement = document.getElementById('rates-details');
+                ratesDetailsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao obter a tabela de fretes.
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check authentication status
+            const isAuthenticated = await checkAuthStatus();
+            
+            // Add event listener for the shipping validation form
+            document.getElementById('shipping-validation-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                if (!isAuthenticated) {
+                    alert('Você precisa estar autenticado para validar fretes.');
+                    return;
+                }
+                
+                const saleId = document.getElementById('sale-id').value.trim();
+                
+                if (saleId) {
+                    validateShipping(saleId);
+                }
+            });
+            
+            // Add event listener for the clear validation button
+            document.getElementById('clear-validation-button').addEventListener('click', function() {
+                document.getElementById('sale-id').value = '';
+                document.getElementById('validation-results-card').style.display = 'none';
+                document.getElementById('package-dimensions-card').style.display = 'none';
+                document.getElementById('shipping-rates-card').style.display = 'none';
+            });
+            
+            // Check for query parameters
+            const queryParams = Utils.getQueryParams();
+            
+            if (queryParams.sale_id) {
+                document.getElementById('sale-id').value = queryParams.sale_id;
+                validateShipping(queryParams.sale_id);
+            }
+        });
+    </script>
+</body>
+</html>

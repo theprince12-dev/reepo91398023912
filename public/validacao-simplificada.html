@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validação de Frete Simplificada</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="icon" href="images/favicon.ico">
+    <style>
+        .json-display {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .dimension-info {
+            padding: 10px;
+            border-left: 3px solid #007bff;
+            margin-bottom: 10px;
+            background-color: #f1f8ff;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: #e7f1ff;
+            color: #0d6efd;
+        }
+        .bg-status-correto {
+            background-color: #d1e7dd;
+        }
+        .bg-status-cobrando-menos {
+            background-color: #fff3cd;
+        }
+        .bg-status-cobrando-mais {
+            background-color: #f8d7da;
+        }
+        .bg-status-erro {
+            background-color: #f8d7da;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 123, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #007bff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .history-item {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .history-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Mobile menu button styles */
+        @media (max-width: 992px) {
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1000;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            
+            .container {
+                padding-top: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+    <div class="d-block d-lg-none">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <span>☰</span>
+        </button>
+    </div>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Validação de Frete Simplificada</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Esta interface utiliza a nova abordagem simplificada para validação de frete, que consulta diretamente as dimensões dos itens na API do Mercado Livre.</p>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Esta implementação utiliza o endpoint <code>/shipments/{id}/items</code> para obter diretamente as dimensões dos produtos, eliminando a complexidade da abordagem anterior.
+                        </div>
+                        
+                        <form id="validationForm" class="mb-4">
+                            <div class="mb-3">
+                                <label for="shippingId" class="form-label">ID do Shipping</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="shippingId" name="shippingId" placeholder="Exemplo: 44343234077" required>
+                                    <button type="submit" class="btn btn-primary" id="validateBtn">Validar Frete</button>
+                                    <button type="button" class="btn btn-info" id="listItemsBtn">Listar Itens</button>
+                                </div>
+                                <div class="form-text">Informe o ID de Shipping (ex: 44343234077) para validar o frete ou listar os itens.</div>
+                            </div>
+                        </form>
+                        
+                        <div class="accordion" id="resultsAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="resultHeading">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#resultCollapse" aria-expanded="true" aria-controls="resultCollapse">
+                                        Resultado da Validação
+                                    </button>
+                                </h2>
+                                <div id="resultCollapse" class="accordion-collapse collapse show" aria-labelledby="resultHeading">
+                                    <div class="accordion-body">
+                                        <div id="resultContainer" class="d-none">
+                                            <div id="statusBadge" class="alert mb-3"></div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">Frete Calculado</div>
+                                                        <div class="card-body">
+                                                            <h3 id="calculatedFreight" class="mb-0 text-primary">-</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">Frete Cobrado</div>
+                                                        <div class="card-body">
+                                                            <h3 id="chargedFreight" class="mb-0 text-primary">-</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">Diferença</div>
+                                                        <div class="card-body">
+                                                            <h3 id="freightDifference" class="mb-0">-</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Shipping ID:</label>
+                                                        <div id="resultShippingId" class="form-control-plaintext">-</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Coluna de Frete:</label>
+                                                        <div id="freightColumn" class="form-control-plaintext">-</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div id="rawResultContainer">
+                                                <h6 class="mt-3">Resposta JSON Completa:</h6>
+                                                <pre id="rawResult" class="json-display"></pre>
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="loadingContainer" class="text-center d-none">
+                                            <div class="loading mb-2"></div>
+                                            <p>Processando validação...</p>
+                                        </div>
+                                        
+                                        <div id="emptyResult" class="text-center">
+                                            <p class="text-muted">Nenhuma validação realizada ainda. Informe um Shipping ID e clique em "Validar Frete".</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="itemsHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#itemsCollapse" aria-expanded="false" aria-controls="itemsCollapse">
+                                        Itens do Pacote
+                                    </button>
+                                </h2>
+                                <div id="itemsCollapse" class="accordion-collapse collapse" aria-labelledby="itemsHeading">
+                                    <div class="accordion-body">
+                                        <div id="itemsContainer" class="d-none">
+                                            <h5 id="itemsTitle" class="mb-3">Itens do Pacote</h5>
+                                            <div id="itemsList"></div>
+                                            <div id="rawItemsContainer">
+                                                <h6 class="mt-3">Resposta JSON Completa:</h6>
+                                                <pre id="rawItems" class="json-display"></pre>
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="loadingItemsContainer" class="text-center d-none">
+                                            <div class="loading mb-2"></div>
+                                            <p>Buscando itens...</p>
+                                        </div>
+                                        
+                                        <div id="emptyItems" class="text-center">
+                                            <p class="text-muted">Nenhum item listado ainda. Informe um Shipping ID e clique em "Listar Itens".</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="historyHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#historyCollapse" aria-expanded="false" aria-controls="historyCollapse">
+                                        Histórico de Validações
+                                    </button>
+                                </h2>
+                                <div id="historyCollapse" class="accordion-collapse collapse" aria-labelledby="historyHeading">
+                                    <div class="accordion-body">
+                                        <div id="historyContainer">
+                                            <div id="historyList" class="list-group"></div>
+                                            <div id="emptyHistory" class="text-center">
+                                                <p class="text-muted">Nenhuma validação no histórico.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Validação em Lote</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Valide múltiplos IDs de Shipping de uma vez.</p>
+                        
+                        <form id="batchForm" class="mb-4">
+                            <div class="mb-3">
+                                <label for="batchIds" class="form-label">IDs de Shipping (um por linha)</label>
+                                <textarea class="form-control" id="batchIds" rows="4" placeholder="Exemplo:&#10;44343234077&#10;44343234078" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="batchValidateBtn">Validar em Lote</button>
+                        </form>
+                        
+                        <div id="batchResultContainer" class="d-none">
+                            <h5 class="mb-3">Resultados do Lote</h5>
+                            <div class="alert alert-info mb-3" id="batchSummary"></div>
+                            <div id="batchResults"></div>
+                            <div id="rawBatchResultContainer">
+                                <h6 class="mt-3">Resposta JSON Completa:</h6>
+                                <pre id="rawBatchResult" class="json-display"></pre>
+                            </div>
+                        </div>
+                        
+                        <div id="loadingBatchContainer" class="text-center d-none">
+                            <div class="loading mb-2"></div>
+                            <p>Processando validações em lote...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white mt-5 py-3">
+        <div class="container text-center">
+            <p class="mb-0">Validação de Frete Simplificada - Implementação Otimizada | 2025</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components/menu.js"></script>
+    <script>
+        // Inicialização do menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    const menuContainer = document.getElementById('floating-menu-container');
+                    if (menuContainer) {
+                        menuContainer.classList.toggle('expanded');
+                    }
+                });
+            }
+        });
+        
+        // Histórico de validações (armazenado localmente)
+        let validationHistory = JSON.parse(localStorage.getItem('validationHistory') || '[]');
+        
+        // Função para adicionar uma validação ao histórico
+        function addToHistory(result) {
+            const historyItem = {
+                id: result.shipping_id,
+                timestamp: new Date().toISOString(),
+                status: result.status,
+                frete_calculado: result.frete_calculado,
+                frete_cobrado: result.frete_cobrado,
+                diferenca: result.diferenca
+            };
+            
+            // Adicionar ao início do array
+            validationHistory.unshift(historyItem);
+            
+            // Limitar a 20 itens
+            if (validationHistory.length > 20) {
+                validationHistory.pop();
+            }
+            
+            // Salvar no localStorage
+            localStorage.setItem('validationHistory', JSON.stringify(validationHistory));
+            
+            // Atualizar a exibição do histórico
+            updateHistoryDisplay();
+        }
+        
+        // Função para atualizar a exibição do histórico
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+            const emptyHistory = document.getElementById('emptyHistory');
+            
+            if (validationHistory.length === 0) {
+                historyList.classList.add('d-none');
+                emptyHistory.classList.remove('d-none');
+                return;
+            }
+            
+            historyList.classList.remove('d-none');
+            emptyHistory.classList.add('d-none');
+            
+            historyList.innerHTML = '';
+            
+            validationHistory.forEach((item, index) => {
+                const date = new Date(item.timestamp);
+                const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+                
+                let statusClass = 'bg-secondary';
+                if (item.status.includes('CORRETO')) statusClass = 'bg-success';
+                else if (item.status.includes('COBRANDO_MENOS')) statusClass = 'bg-warning';
+                else if (item.status.includes('COBRANDO_MAIS')) statusClass = 'bg-danger';
+                else if (item.status.includes('ERRO')) statusClass = 'bg-danger';
+                
+                const element = document.createElement('a');
+                element.className = 'list-group-item list-group-item-action history-item';
+                element.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">Shipping ID: ${item.id}</h6>
+                        <small>${formattedDate}</small>
+                    </div>
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <span class="badge ${statusClass}">${item.status}</span>
+                        <small>Diferença: R$ ${(item.diferenca || 0).toFixed(2)}</small>
+                    </div>
+                `;
+                
+                element.addEventListener('click', () => {
+                    document.getElementById('shippingId').value = item.id;
+                    document.getElementById('validateBtn').click();
+                });
+                
+                historyList.appendChild(element);
+            });
+        }
+        
+        // Função para validar o frete
+        async function validateFreight(shippingId) {
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/simplificado/validacao-frete/pacote/${shippingId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Erro ao validar frete');
+                }
+                
+                showResult(result);
+                addToHistory(result);
+                
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        // Função para listar os itens de um pacote
+        async function listItems(shippingId) {
+            showLoadingItems();
+            
+            try {
+                const response = await fetch(`/api/simplificado/validacao-frete/pacote/${shippingId}/itens`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Erro ao listar itens');
+                }
+                
+                showItems(result);
+                
+            } catch (error) {
+                showItemsError(error.message);
+            }
+        }
+        
+        // Função para validar em lote
+        async function validateBatch(shippingIds) {
+            showLoadingBatch();
+            
+            try {
+                const response = await fetch(`/api/simplificado/validacao-frete/lote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ shipping_ids: shippingIds })
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Erro ao validar em lote');
+                }
+                
+                showBatchResult(result);
+                
+            } catch (error) {
+                showBatchError(error.message);
+            }
+        }
+        
+        // Função para exibir o resultado da validação
+        function showResult(result) {
+            document.getElementById('loadingContainer').classList.add('d-none');
+            document.getElementById('emptyResult').classList.add('d-none');
+            document.getElementById('resultContainer').classList.remove('d-none');
+            
+            // Exibir os dados
+            document.getElementById('resultShippingId').textContent = result.shipping_id;
+            document.getElementById('calculatedFreight').textContent = `R$ ${(result.frete_calculado || 0).toFixed(2)}`;
+            document.getElementById('chargedFreight').textContent = `R$ ${(result.frete_cobrado || 0).toFixed(2)}`;
+            
+            const diferenca = result.diferenca || 0;
+            document.getElementById('freightDifference').textContent = `R$ ${diferenca.toFixed(2)}`;
+            
+            if (diferenca > 0) {
+                document.getElementById('freightDifference').classList.add('text-warning');
+                document.getElementById('freightDifference').classList.remove('text-danger', 'text-success');
+            } else if (diferenca < 0) {
+                document.getElementById('freightDifference').classList.add('text-danger');
+                document.getElementById('freightDifference').classList.remove('text-warning', 'text-success');
+            } else {
+                document.getElementById('freightDifference').classList.add('text-success');
+                document.getElementById('freightDifference').classList.remove('text-warning', 'text-danger');
+            }
+            
+            document.getElementById('freightColumn').textContent = result.coluna_frete || '-';
+            
+            // Exibir o status
+            const statusBadge = document.getElementById('statusBadge');
+            let statusClass = 'alert-secondary';
+            let statusText = result.status || 'Status desconhecido';
+            
+            if (statusText.includes('CORRETO')) {
+                statusClass = 'alert-success';
+                statusText = '✓ CORRETO - Os valores de frete estão alinhados';
+            } else if (statusText.includes('COBRANDO_MENOS')) {
+                statusClass = 'alert-warning';
+                statusText = '⚠️ COBRANDO MENOS - O Mercado Livre está cobrando menos que o esperado';
+            } else if (statusText.includes('COBRANDO_MAIS')) {
+                statusClass = 'alert-danger';
+                statusText = '❌ COBRANDO MAIS - O Mercado Livre está cobrando mais que o esperado';
+            } else if (statusText.includes('COMPRADOR_PAGOU')) {
+                statusClass = 'alert-info';
+                statusText = 'ℹ️ COMPRADOR PAGOU - O comprador pagou o frete';
+            } else if (statusText.includes('ERRO')) {
+                statusClass = 'alert-danger';
+                statusText = '❌ ERRO - ' + statusText;
+            }
+            
+            if (statusText.includes('MULTIPLO')) {
+                statusText += ' (pacote com múltiplos itens)';
+            }
+            
+            statusBadge.className = 'alert mb-3 ' + statusClass;
+            statusBadge.textContent = statusText;
+            
+            // Exibir o JSON completo
+            document.getElementById('rawResult').textContent = JSON.stringify(result, null, 2);
+        }
+        
+        // Função para exibir a lista de itens
+        function showItems(result) {
+            document.getElementById('loadingItemsContainer').classList.add('d-none');
+            document.getElementById('emptyItems').classList.add('d-none');
+            document.getElementById('itemsContainer').classList.remove('d-none');
+            
+            // Mostrar o accoridion de itens
+            const itemsButton = document.querySelector('button[data-bs-target="#itemsCollapse"]');
+            const itemsCollapse = document.getElementById('itemsCollapse');
+            
+            if (itemsButton.classList.contains('collapsed')) {
+                itemsButton.click();
+            }
+            
+            // Atualizar o título
+            document.getElementById('itemsTitle').textContent = `Itens do Pacote ${result.shipping_id} (${result.quantidade_itens} ${result.quantidade_itens > 1 ? 'itens' : 'item'})`;
+            
+            // Limpar a lista de itens
+            const itemsList = document.getElementById('itemsList');
+            itemsList.innerHTML = '';
+            
+            // Adicionar cada item
+            result.itens.forEach((item, index) => {
+                const dimensoes = item.dimensoes || {};
+                const temDimensoesCompletas = dimensoes.comprimento && dimensoes.largura && dimensoes.altura && dimensoes.peso;
+                
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                card.innerHTML = `
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Item ${index + 1}: ${item.id}</span>
+                        <span class="badge ${item.condicao === 'new' ? 'bg-success' : 'bg-secondary'}">
+                            ${item.condicao === 'new' ? 'Novo' : 'Usado'}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Preço:</strong> R$ ${(item.preco || 0).toFixed(2)}</p>
+                                <p><strong>Quantidade:</strong> ${item.quantidade || 1}</p>
+                                <p><strong>Categoria:</strong> ${item.categoria_id || 'N/D'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="dimension-info">
+                                    <h6 class="mb-2">Dimensões:</h6>
+                                    <p class="mb-1"><strong>Comprimento:</strong> ${dimensoes.comprimento || 'N/D'} cm</p>
+                                    <p class="mb-1"><strong>Largura:</strong> ${dimensoes.largura || 'N/D'} cm</p>
+                                    <p class="mb-1"><strong>Altura:</strong> ${dimensoes.altura || 'N/D'} cm</p>
+                                    <p class="mb-1"><strong>Peso:</strong> ${dimensoes.peso || 'N/D'} g</p>
+                                    <p class="mb-1"><strong>Peso Volumétrico:</strong> ${dimensoes.peso_volumetrico_kg || 'N/D'} kg</p>
+                                    <p class="mb-0"><strong>Volume:</strong> ${dimensoes.volume || 'N/D'} cm³</p>
+                                </div>
+                                ${!temDimensoesCompletas ? '<div class="alert alert-warning mt-2 mb-0">⚠️ Dimensões incompletas</div>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                itemsList.appendChild(card);
+            });
+            
+            // Exibir o JSON completo
+            document.getElementById('rawItems').textContent = JSON.stringify(result, null, 2);
+        }
+        
+        // Função para exibir o resultado do lote
+        function showBatchResult(result) {
+            document.getElementById('loadingBatchContainer').classList.add('d-none');
+            document.getElementById('batchResultContainer').classList.remove('d-none');
+            
+            // Exibir resumo
+            document.getElementById('batchSummary').textContent = `Total: ${result.total} | Sucessos: ${result.sucessos} | Erros: ${result.erros}`;
+            
+            // Limpar os resultados
+            const batchResults = document.getElementById('batchResults');
+            batchResults.innerHTML = '';
+            
+            // Exibir cada resultado
+            if (result.resultados && result.resultados.length > 0) {
+                const table = document.createElement('table');
+                table.className = 'table table-striped table-hover';
+                
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th>Shipping ID</th>
+                        <th>Status</th>
+                        <th>Frete Calculado</th>
+                        <th>Frete Cobrado</th>
+                        <th>Diferença</th>
+                    </tr>
+                `;
+                
+                const tbody = document.createElement('tbody');
+                
+                result.resultados.forEach(item => {
+                    let statusClass = '';
+                    if (item.status.includes('CORRETO')) statusClass = 'bg-status-correto';
+                    else if (item.status.includes('COBRANDO_MENOS')) statusClass = 'bg-status-cobrando-menos';
+                    else if (item.status.includes('COBRANDO_MAIS')) statusClass = 'bg-status-cobrando-mais';
+                    else if (item.status.includes('ERRO')) statusClass = 'bg-status-erro';
+                    
+                    const row = document.createElement('tr');
+                    row.className = statusClass;
+                    row.innerHTML = `
+                        <td>${item.shipping_id}</td>
+                        <td>${item.status}</td>
+                        <td>R$ ${(item.frete_calculado || 0).toFixed(2)}</td>
+                        <td>R$ ${(item.frete_cobrado || 0).toFixed(2)}</td>
+                        <td>R$ ${(item.diferenca || 0).toFixed(2)}</td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                batchResults.appendChild(table);
+            }
+            
+            // Exibir erros
+            if (result.erros && result.erros.length > 0) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger mt-3';
+                errorDiv.innerHTML = '<h6>Erros:</h6>';
+                
+                const errorList = document.createElement('ul');
+                result.erros.forEach(erro => {
+                    const li = document.createElement('li');
+                    li.textContent = `${erro.shipping_id}: ${erro.erro}`;
+                    errorList.appendChild(li);
+                });
+                
+                errorDiv.appendChild(errorList);
+                batchResults.appendChild(errorDiv);
+            }
+            
+            // Exibir o JSON completo
+            document.getElementById('rawBatchResult').textContent = JSON.stringify(result, null, 2);
+        }
+        
+        // Função para mostrar o indicador de carregamento da validação
+        function showLoading() {
+            document.getElementById('resultContainer').classList.add('d-none');
+            document.getElementById('emptyResult').classList.add('d-none');
+            document.getElementById('loadingContainer').classList.remove('d-none');
+        }
+        
+        // Função para mostrar erro de validação
+        function showError(message) {
+            document.getElementById('loadingContainer').classList.add('d-none');
+            document.getElementById('emptyResult').classList.add('d-none');
+            document.getElementById('resultContainer').classList.remove('d-none');
+            
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.className = 'alert mb-3 alert-danger';
+            statusBadge.textContent = '❌ ERRO: ' + message;
+            
+            document.getElementById('calculatedFreight').textContent = '-';
+            document.getElementById('chargedFreight').textContent = '-';
+            document.getElementById('freightDifference').textContent = '-';
+            document.getElementById('resultShippingId').textContent = document.getElementById('shippingId').value || '-';
+            document.getElementById('freightColumn').textContent = '-';
+            document.getElementById('rawResult').textContent = JSON.stringify({ error: message }, null, 2);
+        }
+        
+        // Função para mostrar o indicador de carregamento da listagem de itens
+        function showLoadingItems() {
+            document.getElementById('itemsContainer').classList.add('d-none');
+            document.getElementById('emptyItems').classList.add('d-none');
+            document.getElementById('loadingItemsContainer').classList.remove('d-none');
+            
+            // Mostrar o accoridion de itens
+            const itemsButton = document.querySelector('button[data-bs-target="#itemsCollapse"]');
+            const itemsCollapse = document.getElementById('itemsCollapse');
+            
+            if (itemsButton.classList.contains('collapsed')) {
+                itemsButton.click();
+            }
+        }
+        
+        // Função para mostrar erro de listagem de itens
+        function showItemsError(message) {
+            document.getElementById('loadingItemsContainer').classList.add('d-none');
+            document.getElementById('emptyItems').classList.add('d-none');
+            document.getElementById('itemsContainer').classList.remove('d-none');
+            
+            const itemsList = document.getElementById('itemsList');
+            itemsList.innerHTML = `
+                <div class="alert alert-danger">
+                    <h6>Erro ao listar itens:</h6>
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            document.getElementById('itemsTitle').textContent = 'Erro ao listar itens';
+            document.getElementById('rawItems').textContent = JSON.stringify({ error: message }, null, 2);
+        }
+        
+        // Função para mostrar o indicador de carregamento da validação em lote
+        function showLoadingBatch() {
+            document.getElementById('batchResultContainer').classList.add('d-none');
+            document.getElementById('loadingBatchContainer').classList.remove('d-none');
+        }
+        
+        // Função para mostrar erro de validação em lote
+        function showBatchError(message) {
+            document.getElementById('loadingBatchContainer').classList.add('d-none');
+            document.getElementById('batchResultContainer').classList.remove('d-none');
+            
+            document.getElementById('batchResults').innerHTML = `
+                <div class="alert alert-danger">
+                    <h6>Erro ao validar em lote:</h6>
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            document.getElementById('batchSummary').textContent = 'Erro na validação em lote';
+            document.getElementById('rawBatchResult').textContent = JSON.stringify({ error: message }, null, 2);
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Atualizar a exibição do histórico
+            updateHistoryDisplay();
+            
+            // Form de validação
+            document.getElementById('validationForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const shippingId = document.getElementById('shippingId').value.trim();
+                if (shippingId) {
+                    validateFreight(shippingId);
+                }
+            });
+            
+            // Botão de listar itens
+            document.getElementById('listItemsBtn').addEventListener('click', () => {
+                const shippingId = document.getElementById('shippingId').value.trim();
+                if (shippingId) {
+                    listItems(shippingId);
+                }
+            });
+            
+            // Form de validação em lote
+            document.getElementById('batchForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const batchText = document.getElementById('batchIds').value.trim();
+                if (batchText) {
+                    const shippingIds = batchText.split('\n')
+                        .map(id => id.trim())
+                        .filter(id => id);
+                    
+                    if (shippingIds.length > 0) {
+                        validateBatch(shippingIds);
+                    }
+                }
+            });
+        });
+    </script>

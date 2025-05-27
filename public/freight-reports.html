@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Livre - Relatórios de Frete</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <!-- Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <!-- ChartJS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        .summary-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            flex: 1;
+            min-width: 200px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .summary-card .title {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        
+        .summary-card .value {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .negative-value {
+            color: #dc3545;
+        }
+        
+        .positive-value {
+            color: #198754;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .tab.active {
+            font-weight: bold;
+            border-bottom: 2px solid #0d6efd;
+            color: #0d6efd;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .pagination button {
+            margin: 0 5px;
+            padding: 5px 10px;
+            border: 1px solid #dee2e6;
+            background-color: #fff;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .pagination button.active {
+            background-color: #0d6efd;
+            color: #fff;
+            border-color: #0d6efd;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .close-button {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .loading-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 5px solid #0d6efd;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+    <div class="d-block d-lg-none">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <span>☰</span>
+        </button>
+    </div>
+
+    <!-- Floating Menu Container (inserido via JS) -->
+    <div id="floating-menu-container" class="floating-menu-container"></div>
+
+    <!-- Main Content -->
+    <main class="container mt-4">
+        <h1 class="text-center mb-4">Relatórios de Divergências de Frete</h1>
+        <p class="text-center mb-4">
+            Visualize e analise as divergências entre o frete cobrado e o frete calculado para suas vendas.
+        </p>
+        
+        <!-- Tabs -->
+        <div class="card mb-4">
+            <div class="card-body p-0">
+                <div class="tabs">
+                    <div class="tab active" data-tab="summary">Resumo</div>
+                    <div class="tab" data-tab="discrepancies">Divergências Detalhadas</div>
+                    <div class="tab" data-tab="analysis">Análises</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>Filtros
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="report-filters" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="date-range" class="form-label">Período</label>
+                        <div class="d-flex align-items-center">
+                            <input type="date" id="date-from" class="form-control">
+                            <span class="mx-2">até</span>
+                            <input type="date" id="date-to" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="status-filter" class="form-label">Status</label>
+                        <select id="status-filter" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="validado">Validado</option>
+                            <option value="corrigido">Corrigido</option>
+                            <option value="ignorado">Ignorado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="min-difference" class="form-label">Diferença Mínima (R$)</label>
+                        <input type="number" id="min-difference" class="form-control" min="0.01" step="0.01" value="0.10">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="only-loss" class="form-label">Mostrar</label>
+                        <select id="only-loss" class="form-select">
+                            <option value="true">Apenas Prejuízos</option>
+                            <option value="false">Todas Divergências</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2" id="apply-filters">
+                            <i class="fas fa-search me-2"></i>Aplicar Filtros
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="export-report">
+                            <i class="fas fa-file-export me-2"></i>Exportar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Loading Container -->
+        <div id="loading-container" class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <span class="ms-2">Carregando dados...</span>
+        </div>
+        
+        <!-- Error Message -->
+        <div id="error-message" class="alert alert-danger" style="display: none;">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span id="error-text"></span>
+        </div>
+        
+        <!-- Summary Tab Content -->
+        <div class="tab-content active" id="summary-tab">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Resumo do Período
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <div class="title">Total de Vendas</div>
+                            <div class="value" id="total-sales">-</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="title">Envios com Divergências</div>
+                            <div class="value" id="total-discrepancies">-</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="title">% de Divergências</div>
+                            <div class="value" id="percentage-discrepancies">-</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="title">Prejuízo Total</div>
+                            <div class="value negative-value" id="total-loss">-</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Prejuízo Mensal</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="monthly-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Top 5 Categorias com Prejuízo</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="categories-chart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Top 5 Compradores com Prejuízo</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="buyers-chart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Status das Divergências</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="status-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Discrepancies Tab Content -->
+        <div class="tab-content" id="discrepancies-tab">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Divergências Detalhadas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="discrepancies-table">
+                            <thead>
+                                <tr>
+                                    <th>ID de Envio</th>
+                                    <th>ID da Venda</th>
+                                    <th>Data Pedido</th>
+                                    <th>Comprador</th>
+                                    <th>Frete Cobrado (R$)</th>
+                                    <th>Frete Calculado (R$)</th>
+                                    <th>Diferença (R$)</th>
+                                    <th>Status</th>
+                                    <th>Data Validação</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Preenchido via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination" id="pagination-container">
+                        <!-- Preenchido via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analysis Tab Content -->
+        <div class="tab-content" id="analysis-tab">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Análise de Tendências
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Média de Prejuízo por Mês</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="average-loss-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Distribuição por Valor de Prejuízo</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="loss-distribution-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Shipment Details Modal -->
+        <div id="shipment-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-button" id="close-modal">&times;</span>
+                <h2>Detalhes da Divergência</h2>
+                <div id="modal-loading" class="d-flex justify-content-center my-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+                <div id="modal-error" class="alert alert-danger mt-3" style="display: none;">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span id="modal-error-text"></span>
+                </div>
+                <div id="shipment-details">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mt-5 mb-3 text-center">
+        <p>&copy; 2025 Mercado Livre Product App</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/freight-report.js"></script>
+    <script src="js/components/menu.js"></script>
+    
+    <script>
+        // Inicialização do menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    const menuContainer = document.getElementById('floating-menu-container');
+                    if (menuContainer) {
+                        menuContainer.classList.toggle('expanded');
+                    }
+                });
+            }
+        });
+    
+        // Global variables
+        let reportData = null;
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        
+        // Initialize date inputs with default values (last 30 days)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default date range (last 30 days)
+            const today = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            
+            // Format dates for input fields (YYYY-MM-DD)
+            document.getElementById('date-from').value = formatDateForInput(thirtyDaysAgo);
+            document.getElementById('date-to').value = formatDateForInput(today);
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Load initial report
+            loadReport();
+        });
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Hide all tab content
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    // Show content for clicked tab
+                    const tabId = `${this.dataset.tab}-tab`;
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Apply filters
+            document.getElementById('report-filters').addEventListener('submit', function(e) {
+                e.preventDefault();
+                loadReport();
+            });
+            
+            // Export report
+            document.getElementById('export-report').addEventListener('click', function() {
+                exportReport();
+            });
+            
+            // Modal close button
+            document.getElementById('close-modal').addEventListener('click', function() {
+                document.getElementById('shipment-modal').style.display = 'none';
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('shipment-modal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+        
+        // Load report based on filters
+        async function loadReport() {
+            try {
+                // Show loading spinner
+                const loadingContainer = document.getElementById('loading-container');
+                loadingContainer.style.display = 'flex';
+                
+                // Hide error message
+                document.getElementById('error-message').style.display = 'none';
+                
+                // Get filter values
+                const fromDate = document.getElementById('date-from').value;
+                const toDate = document.getElementById('date-to').value;
+                const status = document.getElementById('status-filter').value;
+                const minDifference = document.getElementById('min-difference').value;
+                const onlyLoss = document.getElementById('only-loss').value;
+                
+                // Build query parameters
+                const params = new URLSearchParams();
+                params.append('from', `${fromDate}T00:00:00.000Z`);
+                params.append('to', `${toDate}T23:59:59.999Z`);
+                if (status) params.append('status', status);
+                params.append('min_difference', minDifference);
+                params.append('only_loss', onlyLoss);
+                
+                // Fetch report data
+                const response = await fetch(`/api/reports/freight/summary?${params.toString()}`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'Erro ao carregar relatório');
+                }
+                
+                // Save report data
+                reportData = data;
+                
+                // Update UI
+                updateSummaryTab(data);
+                
+                // Load the detailed discrepancies data
+                const discrepanciesResponse = await fetch(`/api/reports/freight/discrepancies?${params.toString()}`);
+                const discrepanciesData = await discrepanciesResponse.json();
+                
+                if (discrepanciesData.success) {
+                    // Display discrepancies data
+                    displayDiscrepancies(discrepanciesData.discrepancies);
+                }
+                
+                // Hide loading spinner
+                loadingContainer.style.display = 'none';
+            } catch (error) {
+                // Hide loading spinner
+                document.getElementById('loading-container').style.display = 'none';
+                
+                // Show error message
+                const errorMessage = document.getElementById('error-message');
+                const errorText = document.getElementById('error-text');
+                errorText.textContent = `Erro ao carregar relatório: ${error.message}`;
+                errorMessage.style.display = 'block';
+                
+                console.error('Error loading report:', error);
+            }
+        }
+        
+        // Update summary tab with report data
+        function updateSummaryTab(data) {
+            // Update summary cards
+            document.getElementById('total-sales').textContent = data.report_meta.total_sales;
+            document.getElementById('total-discrepancies').textContent = data.report_meta.total_shipments_analyzed;
+            document.getElementById('percentage-discrepancies').textContent = `${data.report_meta.loss_percentage}%`;
+            document.getElementById('total-loss').textContent = `R$ ${data.report_meta.total_loss}`;
+            
+            // Create charts
+            createMonthlyChart(data.monthly_summary);
+            createCategoriesChart(data.top_categories);
+            createBuyersChart(data.top_buyers);
+            createStatusChart(data.status_summary);
+            
+            // Create analysis charts
+            createAverageLossChart(data.monthly_summary);
+            createLossDistributionChart(data.status_summary);
+        }
+        
+        // Display discrepancies in table
+        function displayDiscrepancies(discrepancies) {
+            const tableBody = document.querySelector('#discrepancies-table tbody');
+            tableBody.innerHTML = '';
+            
+            // Calculate pagination
+            const totalPages = Math.ceil(discrepancies.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, discrepancies.length);
+            
+            // Display current page items
+            for (let i = startIndex; i < endIndex; i++) {
+                const d = discrepancies[i];
+                const row = document.createElement('tr');
+                
+                // Apply color based on status
+                let statusClass = '';
+                switch (d.status) {
+                    case 'pendente': statusClass = ''; break;
+                    case 'validado': statusClass = 'positive-value'; break;
+                    case 'corrigido': statusClass = 'positive-value'; break;
+                    case 'ignorado': statusClass = 'text-secondary'; break;
+                }
+                
+                // Format difference value with color
+                const differenceClass = d.is_loss ? 'negative-value' : 'positive-value';
+                
+                row.innerHTML = `
+                    <td>${d.shipping_id}</td>
+                    <td>${d.sale_id || '-'}</td>
+                    <td>${d.order_date ? new Date(d.order_date).toLocaleDateString('pt-BR') : '-'}</td>
+                    <td>${d.buyer_nickname || d.buyer_id || '-'}</td>
+                    <td>R$ ${d.charged_freight.toFixed(2)}</td>
+                    <td>R$ ${d.calculated_freight.toFixed(2)}</td>
+                    <td class="${differenceClass}">R$ ${d.difference.toFixed(2)}</td>
+                    <td class="${statusClass}">${d.status}</td>
+                    <td>${new Date(d.validation_date).toLocaleDateString('pt-BR')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary view-details" data-id="${d.shipping_id}">
+                            <i class="fas fa-search me-1"></i>Detalhes
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            }
+            
+            // Add event listeners to detail buttons
+            document.querySelectorAll('.view-details').forEach(button => {
+                button.addEventListener('click', function() {
+                    const shippingId = this.dataset.id;
+                    showShipmentDetails(shippingId);
+                });
+            });
+            
+            // Create pagination
+            createPagination(totalPages);
+        }
+        
+        // Create pagination controls
+        function createPagination(totalPages) {
+            const paginationContainer = document.getElementById('pagination-container');
+            paginationContainer.innerHTML = '';
+            
+            if (totalPages <= 1) return;
+            
+            // Previous button
+            const prevButton = document.createElement('button');
+            prevButton.textContent = '«';
+            prevButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
+            prevButton.disabled = currentPage === 1;
+            prevButton.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadReport();
+                }
+            });
+            paginationContainer.appendChild(prevButton);
+            
+            // Page numbers
+            let startPage = Math.max(currentPage - 2, 1);
+            let endPage = Math.min(startPage + 4, totalPages);
+            
+            if (endPage - startPage < 4) {
+                startPage = Math.max(endPage - 4, 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                pageButton.classList.add('btn', 'btn-sm');
+                
+                if (i === currentPage) {
+                    pageButton.classList.add('btn-primary');
+                } else {
+                    pageButton.classList.add('btn-outline-secondary');
+                }
+                
+                pageButton.addEventListener('click', () => {
+                    currentPage = i;
+                    loadReport();
+                });
+                paginationContainer.appendChild(pageButton);
+            }
+            
+            // Next button
+            const nextButton = document.createElement('button');
+            nextButton.textContent = '»';
+            nextButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
+            nextButton.disabled = currentPage === totalPages;
+            nextButton.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadReport();
+                }
+            });
+            paginationContainer.appendChild(nextButton);
+        }
+        
+        // Show shipment details modal
+        async function showShipmentDetails(shippingId) {
+            try {
+                const modal = document.getElementById('shipment-modal');
+                const modalLoading = document.getElementById('modal-loading');
+                const modalError = document.getElementById('modal-error');
+                const modalErrorText = document.getElementById('modal-error-text');
+                const shipmentDetails = document.getElementById('shipment-details');
+                
+                // Show modal
+                modal.style.display = 'block';
+                
+                // Show loading spinner
+                modalLoading.style.display = 'flex';
+                modalError.style.display = 'none';
+                shipmentDetails.innerHTML = '';
+                
+                // Fetch shipment details
+                const response = await fetch(`/api/reports/freight/shipment/${shippingId}`);
+                const data = await response.json();
+                
+                // Hide loading spinner
+                modalLoading.style.display = 'none';
+                
+                if (!data.success) {
+                    modalErrorText.textContent = data.message || 'Erro ao carregar detalhes do envio';
+                    modalError.style.display = 'block';
+                    return;
+                }
+                
+                // Display shipment details
+                const details = data.data;
+                const differenceClass = details.is_loss ? 'negative-value' : 'positive-value';
+                
+                let detailsHTML = `
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shipping-fast me-2"></i>Informações do Envio
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-striped">
+                                <tr>
+                                    <th width="30%">ID do Envio:</th>
+                                    <td>${details.shipping_id}</td>
+                                </tr>
+                                <tr>
+                                    <th>ID da Venda:</th>
+                                    <td>${details.sale_id || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Frete Cobrado:</th>
+                                    <td>R$ ${details.charged_freight.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                    <th>Frete Calculado:</th>
+                                    <td>R$ ${details.calculated_freight.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                    <th>Diferença:</th>
+                                    <td class="${differenceClass}">R$ ${details.difference.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>

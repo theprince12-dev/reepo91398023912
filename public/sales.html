@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Livre Product App - Vendas</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <!-- Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+        /* Mobile menu button styles */
+        @media (max-width: 992px) {
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1000;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            
+            .container {
+                padding-top: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+        <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+        <div class="d-block d-lg-none">
+            <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+                <span>☰</span>
+            </button>
+        </div>
+
+        <!-- Floating Menu Container (inserido via JS) -->
+        <div id="floating-menu-container" class="floating-menu-container"></div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <h1 class="mt-3 mb-3">Gerenciamento de Vendas</h1>
+        
+        <!-- Authentication Check -->
+        <div id="auth-check" class="alert alert-warning" style="display: none;">
+            <strong>Atenção!</strong> Você precisa estar autenticado para acessar os dados de vendas. 
+            <a href="auth.html" class="btn btn-primary btn-sm">Autenticar</a>
+        </div>
+        
+        <!-- Sales Filter -->
+        <div class="card mb-3">
+            <div class="card-header">Filtrar Vendas</div>
+            <div class="card-body">
+                <form id="sales-filter-form">
+                    <div class="row">
+                        <div class="col-2">
+                            <div class="form-group">
+                                <label for="from-date" class="form-label">Data Inicial:</label>
+                                <input type="date" id="from-date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="form-group">
+                                <label for="to-date" class="form-label">Data Final:</label>
+                                <input type="date" id="to-date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group" style="margin-top: 32px;">
+                                <button type="submit" class="btn btn-primary">Buscar Vendas</button>
+                                <button type="button" id="reset-filter-button" class="btn btn-secondary">Limpar Filtros</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modo de Processamento -->
+        <div class="card mb-3">
+            <div class="card-header">Modo de Processamento</div>
+            <div class="card-body">
+                <div class="form-group">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="custom-control custom-radio">
+                                <input type="radio" id="process-mode-manual" name="process-mode" class="custom-control-input" value="manual" checked>
+                                <label class="custom-control-label" for="process-mode-manual"><strong>Operações Individuais</strong> - Processar cada venda individualmente</label>
+                            </div>
+                            <p class="text-muted ml-4 mt-1">Para processar cada venda com controle dos resultados em tempo real.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="custom-control custom-radio">
+                                <input type="radio" id="process-mode-auto" name="process-mode" class="custom-control-input" value="auto">
+                                <label class="custom-control-label" for="process-mode-auto"><strong>Automático em Lote</strong> - Processar tudo de uma vez</label>
+                            </div>
+                            <p class="text-muted ml-4 mt-1">Para processar todas as vendas de uma vez e receber relatório completo.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="custom-control custom-radio">
+                                <input type="radio" id="process-mode-step" name="process-mode" class="custom-control-input" value="step">
+                                <label class="custom-control-label" for="process-mode-step"><strong>Passo a Passo</strong> - Processamento manual detalhado</label>
+                            </div>
+                            <p class="text-muted ml-4 mt-1">Para validar cada etapa do processo individualmente com máximo controle.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Actions -->
+        <div class="card mb-3" id="batch-actions-card" style="display: none;">
+            <div class="card-header">Ações em Lote</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <button id="batch-process-details-button" class="btn btn-info mr-2">Processar Detalhes Selecionados</button>
+                        <button id="batch-validate-shipping-button" class="btn btn-warning mr-2">Validar Frete Selecionados</button>
+                        <button id="view-batch-results-button" class="btn btn-success" style="display: none;">Ver Resumo de Resultados</button>
+                    </div>
+                    <div class="col-md-4 text-right">
+                        <button id="process-all-button" class="btn btn-primary" title="Executa as duas funções em sequência: primeiro processa os detalhes e depois valida os fretes">Processar Tudo Automaticamente</button>
+                    </div>
+                </div>
+                <div id="batch-status-message" class="mt-2"></div>
+            </div>
+        </div>
+        
+        <!-- Sales Results -->
+        <div class="card mb-3">
+            <div class="card-header">Resultados</div>
+            <div class="card-body">
+                <div id="sales-loading" class="loading-container">
+                    <div class="loading-spinner"></div>
+                </div>
+                
+                <div id="sales-error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="sales-results">
+                    <p>Use o filtro acima para buscar vendas.</p>
+                </div>
+                
+                <div id="sales-pagination" class="mt-3"></div>
+            </div>
+        </div>
+        
+        <!-- Sale Details Modal -->
+        <div id="sale-details-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Detalhes da Venda</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="sale-details-loading" class="loading-container">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    <div id="sale-details-error" class="alert alert-danger" style="display: none;"></div>
+                    <div id="sale-details-content"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary close-modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="container mt-3 mb-3 text-center">
+        <p>&copy; 2025 Mercado Livre Product App</p>
+    </footer>
+
+    <!-- Modal Styles -->
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow: auto;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 0;
+            width: 80%;
+            max-width: 800px;
+            border-radius: var(--border-radius-md);
+            box-shadow: var(--box-shadow-lg);
+            animation: modalFadeIn 0.3s;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: var(--spacing-md);
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top-left-radius: var(--border-radius-md);
+            border-top-right-radius: var(--border-radius-md);
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: var(--font-size-lg);
+        }
+        
+        .close-modal {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close-modal:hover {
+            color: var(--accent-color);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-md);
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .modal-footer {
+            padding: var(--spacing-md);
+            background-color: var(--light-color);
+            text-align: right;
+            border-bottom-left-radius: var(--border-radius-md);
+            border-bottom-right-radius: var(--border-radius-md);
+        }
+    </style>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/sales-integration.js"></script>
+    <script src="js/sales-options.js"></script>
+    <script>
+        let currentSalesData = []; // Store fetched sales data
+
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const response = await ApiService.testAuth();
+                
+                if (!response.success) {
+                    document.getElementById('auth-check').style.display = 'block';
+                }
+                
+                return response.success;
+            } catch (error) {
+                document.getElementById('auth-check').style.display = 'block';
+                return false;
+            }
+        }
+
+        // Set default date range (last 30 days)
+        function setDefaultDateRange() {
+            const toDateInput = document.getElementById('to-date');
+            const fromDateInput = document.getElementById('from-date');
+            
+            // Set to-date to today
+            const today = new Date();
+            const toDateStr = today.toISOString().split('T')[0];
+            toDateInput.value = toDateStr;
+            
+            // Set from-date to 30 days ago
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            const fromDateStr = thirtyDaysAgo.toISOString().split('T')[0];
+            fromDateInput.value = fromDateStr;
+        }
+
+        // Load sales data
+        async function loadSales(fromDate, toDate) {
+            try {
+                // Show loading spinner
+                Utils.showLoading('sales-loading');
+                
+                // Hide error message
+                Utils.hideError('sales-error');
+                
+                // Format dates as ISO strings
+                const fromDateISO = new Date(fromDate).toISOString();
+                const toDateISO = new Date(toDate).toISOString();
+                
+                // Get sales data
+                const response = await ApiService.getAllSales(fromDateISO, toDateISO);
+                currentSalesData = response.sales || []; // Store sales data
+                
+                // Hide loading spinner
+                Utils.hideLoading('sales-loading');
+                
+                // Display sales data
+                const salesResultsElement = document.getElementById('sales-results');
+                
+                if (response.success) {
+                    if (response.total > 0) {
+                        salesResultsElement.innerHTML = `
+                            <div class="alert alert-success mb-3">
+                                <strong>${response.total}</strong> vendas encontradas no período de ${Utils.formatDate(fromDate)} a ${Utils.formatDate(toDate)}.
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="select-all-sales-checkbox"></th>
+                                            <th>ID da Venda</th>
+                                            <th>Data</th>
+                                            <th>Status Venda</th>
+                                            <th>Total</th>
+                                            <th>Status Detalhes</th>
+                                            <th>Status Frete</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sales-table-body">
+                                        <!-- Sales data will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                        
+                        const salesTableBody = document.getElementById('sales-table-body');
+                        salesTableBody.innerHTML = ''; // Clear previous results
+
+                        if (currentSalesData && currentSalesData.length > 0) {
+                            document.getElementById('batch-actions-card').style.display = 'block';
+                            currentSalesData.forEach(sale => {
+                                const status = sale.status || 'pending';
+                                const statusClass = status === 'completed' ? 'success' : 
+                                                   status === 'cancelled' ? 'danger' : 'warning';
+                                
+                                const row = document.createElement('tr');
+                                row.setAttribute('data-sale-id', sale.id);
+                                const shippingId = sale.shipping && sale.shipping.id ? sale.shipping.id : 'N/A';
+                                row.setAttribute('data-shipping-id', shippingId);
+
+                                row.innerHTML = `
+                                    <td><input type="checkbox" class="sale-checkbox" data-sale-id="${sale.id}" data-shipping-id="${shippingId}"></td>
+                                    <td>${sale.id}</td>
+                                    <td>${Utils.formatDate(sale.date_created || sale.date_closed || sale.date_last_updated)}</td>
+                                    <td><span class="badge ${statusClass}">${status}</span></td>
+                                    <td>${Utils.formatCurrency(sale.total_amount || 0)}</td>
+                                    <td id="details-status-${sale.id}"><span class="badge badge-secondary">Pendente</span></td>
+                                    <td id="shipping-status-${sale.id}"><span class="badge badge-secondary">Pendente</span></td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-info process-details-button" data-sale-id="${sale.id}" title="Processar Detalhes"><i class="fas fa-cogs"></i></button>
+                                            <button class="btn btn-sm btn-warning validate-shipping-button" data-sale-id="${sale.id}" data-shipping-id="${shippingId}" title="Validar Frete" ${shippingId === 'N/A' ? 'disabled' : ''}><i class="fas fa-shipping-fast"></i></button>
+                                            <button class="btn btn-sm btn-primary view-details-button" data-sale-id="${sale.id}" title="Ver Detalhes API"><i class="fas fa-eye"></i></button>
+                                            <button class="btn btn-sm btn-success manual-process-button" data-sale-id="${sale.id}" title="Processamento Manual Detalhado"><i class="fas fa-tasks"></i></button>
+                                        </div>
+                                    </td>
+                                `;
+                                salesTableBody.appendChild(row);
+                            });
+                        } else {
+                            document.getElementById('batch-actions-card').style.display = 'none';
+                            salesResultsElement.innerHTML = `
+                                <div class="alert alert-info">
+                                    Nenhuma venda encontrada no período de ${Utils.formatDate(fromDate)} a ${Utils.formatDate(toDate)}.
+                                </div>
+                            `;
+                        }
+                        
+                        // Add event listeners
+                        addEventListenersToSalesTable();
+                        document.getElementById('select-all-sales-checkbox').addEventListener('change', toggleSelectAllSales);
+
+                    } else {
+                         document.getElementById('batch-actions-card').style.display = 'none';
+                        salesResultsElement.innerHTML = `
+                            <div class="alert alert-info">
+                                Nenhuma venda encontrada no período de ${Utils.formatDate(fromDate)} a ${Utils.formatDate(toDate)}.
+                            </div>
+                        `;
+                    }
+                } else {
+                    document.getElementById('batch-actions-card').style.display = 'none';
+                    salesResultsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            ${response.message || 'Não foi possível carregar as vendas.'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                Utils.hideLoading('sales-loading');
+                const salesError = document.getElementById('sales-error');
+                salesError.textContent = `Erro ao carregar vendas: ${error.message}`;
+                salesError.style.display = 'block';
+                document.getElementById('sales-results').innerHTML = `<div class="alert alert-danger">Ocorreu um erro ao carregar as vendas.</div>`;
+                document.getElementById('batch-actions-card').style.display = 'none';
+            }
+        }
+
+        // Add event listeners to buttons in the sales table
+        function addEventListenersToSalesTable() {
+            document.querySelectorAll('.view-details-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const saleId = this.getAttribute('data-sale-id');
+                    showSaleDetails(saleId); // This function shows API details, not processed ones
+                });
+            });
+
+            document.querySelectorAll('.process-details-button').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const saleId = this.getAttribute('data-sale-id');
+                    await processSingleSaleDetails(saleId);
+                });
+            });
+            
+            document.querySelectorAll('.validate-shipping-button').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const shippingId = this.getAttribute('data-shipping-id');
+                    const saleId = this.getAttribute('data-sale-id'); // For updating status cell
+                    if (shippingId && shippingId !== 'N/A') {
+                        await validateSingleSaleShipping(shippingId, saleId);
+                    } else {
+                        alert('ID de envio não disponível para esta venda.');
+                        Utils.updateStatusCell(`shipping-status-${saleId}`, 'Erro', 'ID Envio Ausente', 'danger');
+                    }
+                });
+            });
+            
+            // Botão de processamento manual detalhado
+            document.querySelectorAll('.manual-process-button').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const saleId = this.getAttribute('data-sale-id');
+                    const isStepMode = document.getElementById('process-mode-step').checked;
+                    
+                    // Se estiver no modo passo a passo, vamos para a página de processamento manual
+                    if (isStepMode) {
+                        SalesIntegration.redirectToManualProcessing(saleId);
+                    } else {
+                        // No modo normal, perguntar se quer mudar para processamento manual
+                        if (confirm('Deseja ir para o processamento manual detalhado desta venda?')) {
+                            SalesIntegration.redirectToManualProcessing(saleId);
+                        }
+                    }
+                });
+            });
+        }
+
+        // Toggle select all sales checkboxes
+        function toggleSelectAllSales(event) {
+            const checkboxes = document.querySelectorAll('.sale-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = event.target.checked;
+            });
+        }
+
+        // Process details for a single sale
+        async function processSingleSaleDetails(saleId) {
+            const statusCell = document.getElementById(`details-status-${saleId}`);
+            Utils.updateStatusCell(statusCell, 'Processando...', '', 'info');
+            try {
+                const response = await ApiService.processSaleDetails(saleId);
+                if (response.success) {
+                    Utils.updateStatusCell(statusCell, 'Concluído', response.message, 'success');
+                    // If shipping IDs are returned, update the validate button if it was disabled
+                    if (response.shipping_ids && response.shipping_ids.length > 0) {
+                        const shippingId = response.shipping_ids[0]; // Assuming one shipping ID per sale for simplicity here
+                        const validateButton = document.querySelector(`.validate-shipping-button[data-sale-id="${saleId}"]`);
+                        if (validateButton) {
+                            validateButton.setAttribute('data-shipping-id', shippingId);
+                            validateButton.disabled = false;
+                            // Also update the checkbox
+                            const checkbox = document.querySelector(`.sale-checkbox[data-sale-id="${saleId}"]`);
+                            if(checkbox) checkbox.setAttribute('data-shipping-id', shippingId);
+                        }
+                         // Update the main row attribute as well
+                        const row = document.querySelector(`tr[data-sale-id="${saleId}"]`);
+                        if (row) row.setAttribute('data-shipping-id', shippingId);
+                    }
+                } else {
+                    Utils.updateStatusCell(statusCell, 'Erro', response.message || 'Falha ao processar', 'danger');
+                }
+            } catch (error) {
+                Utils.updateStatusCell(statusCell, 'Erro', error.message, 'danger');
+            }
+        }
+
+        // Validate shipping for a single sale's shipping ID
+        async function validateSingleSaleShipping(shippingId, saleId) { // saleId is for the status cell
+            const statusCell = document.getElementById(`shipping-status-${saleId}`);
+            Utils.updateStatusCell(statusCell, 'Validando...', '', 'info');
+            
+            try {
+                // Verificar qual método de validação usar (simplificado ou original)
+                let response;
+                const useSimplified = SalesOptions.getValidationMethod() === 'simplified';
+                
+                if (useSimplified) {
+                    response = await ApiService.validateSaleShipping(shippingId);
+                } else {
+                    response = await ApiService.validateSaleShippingLegacy(shippingId);
+                }
+                
+                if (response.success) {
+                    Utils.updateStatusCell(statusCell, 'Concluído', response.message, 'success');
+                } else {
+                    Utils.updateStatusCell(statusCell, 'Erro', response.message || 'Falha ao validar', 'danger');
+                }
+            } catch (error) {
+                Utils.updateStatusCell(statusCell, 'Erro', error.message, 'danger');
+            }
+        }
+        
+        // Batch process details
+        async function batchProcessSelectedDetails() {
+            const selectedCheckboxes = document.querySelectorAll('.sale-checkbox:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('Nenhuma venda selecionada para processar detalhes.');
+                return;
+            }
+            const saleIdsToProcess = Array.from(selectedCheckboxes).map(cb => cb.getAttribute('data-sale-id'));
+            
+            Utils.showBatchStatus('Iniciando processamento de detalhes em lote...', 'info');
+            let overallMessage = '';
+
+            for (const saleId of saleIdsToProcess) {
+                const statusCell = document.getElementById(`details-status-${saleId}`);
+                Utils.updateStatusCell(statusCell, 'Processando...', '', 'info');
+            }
+
+            try {
+                const response = await ApiService.batchProcessSalesDetails(saleIdsToProcess);
+                overallMessage = response.message || 'Processamento em lote finalizado.';
+                if (response.results && Array.isArray(response.results)) {
+                    response.results.forEach(res => {
+                        const statusCell = document.getElementById(`details-status-${res.sale_id}`);
+                        if (res.success) {
+                            Utils.updateStatusCell(statusCell, 'Concluído', res.message, 'success');
+                            if (res.shipping_ids && res.shipping_ids.length > 0) {
+                                const shippingId = res.shipping_ids[0];
+                                const validateButton = document.querySelector(`.validate-shipping-button[data-sale-id="${res.sale_id}"]`);
+                                if (validateButton) {
+                                    validateButton.setAttribute('data-shipping-id', shippingId);
+                                    validateButton.disabled = false;
+                                }
+                                const checkbox = document.querySelector(`.sale-checkbox[data-sale-id="${res.sale_id}"]`);
+                                if(checkbox) checkbox.setAttribute('data-shipping-id', shippingId);
+                                const row = document.querySelector(`tr[data-sale-id="${res.sale_id}"]`);
+                                if (row) row.setAttribute('data-shipping-id', shippingId);
+                            }
+                        } else {
+                            Utils.updateStatusCell(statusCell, 'Erro', res.message, 'danger');
+                        }
+                    });
+                }
+                 Utils.showBatchStatus(overallMessage, response.overall_success ? 'success' : 'warning');
+            } catch (error) {
+                overallMessage = `Erro no processamento em lote: ${error.message}`;
+                Utils.showBatchStatus(overallMessage, 'danger');
+                saleIdsToProcess.forEach(saleId => {
+                     Utils.updateStatusCell(document.getElementById(`details-status-${saleId}`), 'Erro Lote', error.message, 'danger');
+                });
+            }
+        }
+
+        // Batch validate shipping
+        async function batchValidateSelectedShipping() {
+            const selectedCheckboxes = document.querySelectorAll('.sale-checkbox:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('Nenhuma venda selecionada para validar frete.');
+                return;
+            }
+            
+            const shippingItemsToValidate = Array.from(selectedCheckboxes).map(cb => {
+                return {
+                    shippingId: cb.getAttribute('data-shipping-id'),
+                    saleId: cb.getAttribute('data-sale-id') // for status update
+                };
+            }).filter(item => item.shippingId && item.shippingId !== 'N/A');
+
+            if (shippingItemsToValidate.length === 0) {
+                alert('Nenhum ID de envio válido encontrado para as vendas selecionadas. Processe os detalhes primeiro.');
+                return;
+            }
+            const shippingIdsOnly = shippingItemsToValidate.map(item => item.shippingId);
+
+            Utils.showBatchStatus('Iniciando validação de fretes em lote...', 'info');
+            let overallMessage = '';
+
+            shippingItemsToValidate.forEach(item => {
+                const statusCell = document.getElementById(`shipping-status-${item.saleId}`);
+                Utils.updateStatusCell(statusCell, 'Validando...', '', 'info');
+            });
+            
+            try {
+                // Verificar qual método de validação usar (simplificado ou original)
+                let response;
+                const useSimplified = SalesOptions.getValidationMethod() === 'simplified';
+                
+                if (useSimplified) {
+                    response = await ApiService.batchValidateSalesShipping(shippingIdsOnly);
+                } else {
+                    response = await ApiService.batchValidateSalesShippingLegacy(shippingIdsOnly);
+                }
+                
+                overallMessage = response.message || 'Validação em lote finalizada.';
+                if (response.results && Array.isArray(response.results)) {
+                    response.results.forEach(res => {
+                        // Find the corresponding saleId for this shippingId to update the correct cell
+                        const originalItem = shippingItemsToValidate.find(item => item.shippingId === res.shipping_id);
+                        if (originalItem) {
+                            const statusCell = document.getElementById(`shipping-status-${originalItem.saleId}`);
+                            if (res.success) {
+                                Utils.updateStatusCell(statusCell, 'Concluído', res.message, 'success');
+                            } else {
+                                Utils.updateStatusCell(statusCell, 'Erro', res.message, 'danger');
+                            }
+                        }
+                    });
+                }
+                Utils.showBatchStatus(overallMessage, response.overall_success ? 'success' : 'warning');
+            } catch (error) {
+                overallMessage = `Erro na validação em lote: ${error.message}`;
+                Utils.showBatchStatus(overallMessage, 'danger');
+                 shippingItemsToValidate.forEach(item => {
+                     Utils.updateStatusCell(document.getElementById(`shipping-status-${item.saleId}`), 'Erro Lote', error.message, 'danger');
+                });
+            }
+        }
+
+
+        // Show sale details (original API data, not processed from DB)
+        async function showSaleDetails(saleId) {
+            const modal = document.getElementById('sale-details-modal');
+            modal.style.display = 'block';
+            Utils.showLoading('sale-details-loading');
+            Utils.hideError('sale-details-error');
+            const saleDetailsContent = document.getElementById('sale-details-content');
+            
+            try {
+                const order = currentSalesData.find(s => String(s.id) === String(saleId));
+
+                Utils.hideLoading('sale-details-loading');
+
+                if (!order) {
+                    saleDetailsContent.innerHTML = `<div class="alert alert-warning">Detalhes da venda ${saleId} não encontrados nos dados carregados.</div>`;
+                    return;
+                }
+                
+                const buyer = order.buyer || {};
+                const buyerName = buyer.nickname || buyer.first_name || buyer.last_name || 'Não disponível';
+                const buyerEmail = buyer.email || 'Não disponível';
+                const items = order.order_items || [];
+                const shipping = order.shipping || {};
+                const shippingStatus = shipping.status || 'Não disponível';
+                const shippingCost = shipping.cost || 0;
+                const shippingAddress = shipping.receiver_address ? 
+                    `${shipping.receiver_address.address_line || ''}, ${shipping.receiver_address.city?.name || ''} - ${shipping.receiver_address.state?.name || ''}, ${shipping.receiver_address.zip_code || ''}`
+                    : 'Não disponível';
+                
+                const payment = order.payments && order.payments.length > 0 ? order.payments[0] : {};
+                const paymentMethod = payment.payment_method_id || 'Não disponível';
+                const paymentStatus = payment.status || 'Não disponível';
+                const paymentTotal = payment.total_paid_amount || order.total_amount || 0;
+                
+                saleDetailsContent.innerHTML = `
+                    <div class="row mb-3">
+                        <div class="col">
+                            <h3>Informações da Venda</h3>
+                            <p><strong>ID:</strong> ${order.id}</p>
+                            <p><strong>Data:</strong> ${Utils.formatDate(order.date_created || order.date_closed)}</p>
+                            <p><strong>Status:</strong> ${order.status || 'Não disponível'}</p>
+                            <p><strong>Total:</strong> ${Utils.formatCurrency(order.total_amount || 0)}</p>
+                        </div>
+                        <div class="col">
+                            <h3>Informações do Comprador</h3>
+                            <p><strong>Nome:</strong> ${buyerName}</p>
+                            <p><strong>Email:</strong> ${buyerEmail}</p>
+                        </div>
+                    </div>
+                    
+                    <h3>Itens</h3>
+                    <div class="table-responsive mb-3">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID Item</th>
+                                    <th>Título</th>
+                                    <th>Quantidade</th>
+                                    <th>Preço Unit.</th>
+                                    <th>Total Item</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.length > 0 ? items.map(item => `
+                                    <tr>
+                                        <td>${item.item?.id || 'N/A'}</td>
+                                        <td>${item.item?.title || 'Não disponível'}</td>
+                                        <td>${item.quantity || 0}</td>
+                                        <td>${Utils.formatCurrency(item.unit_price || 0)}</td>
+                                        <td>${Utils.formatCurrency((item.unit_price || 0) * (item.quantity || 0))}</td>
+                                    </tr>
+                                `).join('') : '<tr><td colspan="5" class="text-center">Nenhum item disponível</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col">
+                            <h3>Informações de Envio</h3>
+                            <p><strong>ID Envio:</strong> ${shipping.id || 'N/A'}</p>
+                            <p><strong>Status:</strong> ${shippingStatus}</p>
+                            <p><strong>Custo:</strong> ${Utils.formatCurrency(shippingCost)}</p>
+                            <p><strong>Endereço:</strong> ${shippingAddress}</p>
+                        </div>
+                        <div class="col">
+                            <h3>Informações de Pagamento</h3>
+                            <p><strong>Método:</strong> ${paymentMethod}</p>
+                            <p><strong>Status:</strong> ${paymentStatus}</p>
+                            <p><strong>Total Pago:</strong> ${Utils.formatCurrency(paymentTotal)}</p>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                Utils.hideLoading('sale-details-loading');
+                const saleDetailsError = document.getElementById('sale-details-error');
+                saleDetailsError.textContent = `Erro ao carregar detalhes da venda: ${error.message}`;
+                saleDetailsError.style.display = 'block';
+                document.getElementById('sale-details-content').innerHTML = `<div class="alert alert-danger">Ocorreu um erro ao carregar os detalhes da venda.</div>`;
+            }
+        }
+
+        // Close the modal
+        function closeModal() {
+            const modal = document.getElementById('sale-details-modal');
+            modal.style.display = 'none';
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async function() {
+            const isAuthenticated = await checkAuthStatus();
+            setDefaultDateRange();
+            
+            document.getElementById('sales-filter-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                if (!isAuthenticated) {
+                    alert('Você precisa estar autenticado para buscar vendas.');
+                    return;
+                }
+                const fromDate = document.getElementById('from-date').value;
+                const toDate = document.getElementById('to-date').value;
+                loadSales(fromDate, toDate);
+            });
+            
+            document.getElementById('reset-filter-button').addEventListener('click', setDefaultDateRange);
+            
+            document.querySelectorAll('.close-modal').forEach(button => button.addEventListener('click', closeModal));
+            window.addEventListener('click', function(event) {
+                if (event.target === document.getElementById('sale-details-modal')) closeModal();
+            });
+
+            // Modo de processamento
+            document.getElementById('process-mode-manual').addEventListener('change', updateProcessingMode);
+            document.getElementById('process-mode-auto').addEventListener('change', updateProcessingMode);
+            
+            // Batch action buttons
+            document.getElementById('batch-process-details-button').addEventListener('click', batchProcessSelectedDetails);
+            document.getElementById('batch-validate-shipping-button').addEventListener('click', batchValidateSelectedShipping);
+            document.getElementById('process-all-button').addEventListener('click', processAllAutomatically);
+        });
+
+        // Helper for batch status
+        Utils.showBatchStatus = function(message, type = 'info') { // types: info, success, warning, danger
+            const batchStatusElement = document.getElementById('batch-status-message');
+            batchStatusElement.textContent = message;
+            batchStatusElement.className = `mt-2 alert alert-${type}`; // Bootstrap alert classes
+        };
+
+        // Helper to update status cells in the table
+        Utils.updateStatusCell = function(cellElementOrId, text, title = '', badgeType = 'secondary') {
+            const cell = typeof cellElementOrId === 'string' ? document.getElementById(cellElementOrId) : cellElementOrId;
+            if (cell) {
+                const tooltipTitle = title && title.trim() !== '' ? title.trim() : (text === 'Concluído' ? 'Operação concluída com sucesso.' : (text === 'Erro' ? 'Ocorreu um erro.' : text));
+                // console.log(`Updating status cell: ID: ${typeof cellElementOrId === 'string' ? cellElementOrId : (cell.id || 'N/A')}, Text: ${text}, Title: ${tooltipTitle}, Type: ${badgeType}`);
+                cell.innerHTML = `<span class="badge badge-${badgeType}" title="${tooltipTitle}">${text}</span>`;
+            }
+        };
+
+        // Update processing mode UI based on selection
+        function updateProcessingMode() {
+            const isAutoMode = document.getElementById('process-mode-auto').checked;
+            const manualButtons = document.querySelectorAll('.process-details-button, .validate-shipping-button');
+            const batchProcessButton = document.getElementById('batch-process-details-button');
+            const batchValidateButton = document.getElementById('batch-validate-shipping-button');
+            const processAllButton = document.getElementById('process-all-button');
+            
+            // Update button visibility based on mode
+            manualButtons.forEach(button => {
+                button.style.display = isAutoMode ? 'none' : 'inline-block';
+            });
+            
+            batchProcessButton.style.display = isAutoMode ? 'none' : 'inline-block';
+            batchValidateButton.style.display = isAutoMode ? 'none' : 'inline-block';
+            processAllButton.style.display = isAutoMode ? 'inline-block' : 'none';
+            
+            // Update the select all checkbox if needed
+            if (isAutoMode) {
+                const selectAllCheckbox = document.getElementById('select-all-sales-checkbox');
+                if (selectAllCheckbox && !selectAllCheckbox.checked) {
+                    selectAllCheckbox.checked = true;
+                    toggleSelectAllSales({ target: selectAllCheckbox });
+                }
+            }
+        }
+        
+        // Process all sales automatically
+        async function processAllAutomatically() {
+            if (currentSalesData.length === 0) {
+                alert('Nenhuma venda disponível para processar.');
+                return;
+            }
+            
+            if (!confirm('Este processo irá processar os detalhes de todas as vendas e validar o frete de todos os envios. Deseja continuar?')) {
+                return;
+            }
+            
+            Utils.showBatchStatus('Iniciando processamento automático de todas as vendas...', 'info');
+            
+            // Preparar arrays para armazenar resultados
+            const detailsResults = [];
+            const shippingResults = [];
+            let detailsSuccessCount = 0;
+            let detailsErrorCount = 0;
+            let shippingSuccessCount = 0;
+            let shippingErrorCount = 0;
+            const shippingIdsMap = new Map(); // Map para armazenar sale_id -> shipping_id
+            
+            // Passo 1: Processar detalhes de todas as vendas
+            for (const sale of currentSalesData) {
+                const saleId = sale.id;
+                const statusCell = document.getElementById(`details-status-${saleId}`);
+                Utils.updateStatusCell(statusCell, 'Processando...', '', 'info');
+                
+                try {
+                    const response = await ApiService.processSaleDetails(saleId);
+                    if (response.success) {
+                        Utils.updateStatusCell(statusCell, 'Concluído', response.message, 'success');
+                        detailsResults.push({
+                            sale_id: saleId,
+                            success: true,
+                            message: response.message,
+                            shipping_ids: response.shipping_ids || []
+                        });
+                        detailsSuccessCount++;
+                        
+                        // Guardar shipping_id para o próximo passo
+                        if (response.shipping_ids && response.shipping_ids.length > 0) {
+                            const shippingId = response.shipping_ids[0];
+                            shippingIdsMap.set(saleId, shippingId);
+                        }
+                    } else {
+                        Utils.updateStatusCell(statusCell, 'Erro', response.message || 'Falha ao processar', 'danger');
+                        detailsResults.push({
+                            sale_id: saleId,
+                            success: false,
+                            message: response.message || 'Falha ao processar'
+                        });
+                        detailsErrorCount++;
+                    }
+                } catch (error) {
+                    Utils.updateStatusCell(statusCell, 'Erro', error.message, 'danger');
+                    detailsResults.push({
+                        sale_id: saleId,
+                        success: false,
+                        message: error.message
+                    });
+                    detailsErrorCount++;
+                }
+                
+                // Pequeno delay para não sobrecarregar a API
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            Utils.showBatchStatus(`Processamento de detalhes concluído. ${detailsSuccessCount} sucessos, ${detailsErrorCount} falhas. Iniciando validação de frete...`, 'info');
+            
+            // Passo 2: Validar fretes
+            for (const [saleId, shippingId] of shippingIdsMap.entries()) {
+                const statusCell = document.getElementById(`shipping-status-${saleId}`);
+                Utils.updateStatusCell(statusCell, 'Validando...', '', 'info');
+                
+                try {
+                    const response = await ApiService.validateSaleShipping(shippingId);
+                    if (response.success) {
+                        Utils.updateStatusCell(statusCell, 'Concluído', response.message, 'success');
+                        shippingResults.push({
+                            shipping_id: shippingId,
+                            sale_id: saleId,
+                            success: true,
+                            message: response.message
+                        });
+                        shippingSuccessCount++;
+                    } else {
+                        Utils.updateStatusCell(statusCell, 'Erro', response.message || 'Falha ao validar', 'danger');
+                        shippingResults.push({
+                            shipping_id: shippingId,
+                            sale_id: saleId,
+                            success: false,
+                            message: response.message || 'Falha ao validar'
+                        });
+                        shippingErrorCount++;
+                    }
+                } catch (error) {
+                    Utils.updateStatusCell(statusCell, 'Erro', error.message, 'danger');
+                    shippingResults.push({
+                        shipping_id: shippingId,
+                        sale_id: saleId,
+                        success: false,
+                        message: error.message
+                    });
+                    shippingErrorCount++;
+                }
+                
+                // Pequeno delay para não sobrecarregar a API
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // Mostrar resumo final
+            const finalMessage = `Processamento automático concluído. 
+                Detalhes: ${detailsSuccessCount} sucessos, ${detailsErrorCount} falhas. 
+                Fretes: ${shippingSuccessCount} sucessos, ${shippingErrorCount} falhas.`;
+            
+            Utils.showBatchStatus(finalMessage, (detailsErrorCount === 0 && shippingErrorCount === 0) ? 'success' : 'warning');
+            
+            // Salvar resultados na sessionStorage para visualização na página de resultados
+            const batchResults = {
+                timestamp: new Date().toISOString(),
+                overall_success: detailsErrorCount === 0 && shippingErrorCount === 0,
+                message: finalMessage,
+                details_results: detailsResults,
+                shipping_results: shippingResults,
+                metrics: {
+                    details_success: detailsSuccessCount,
+                    details_error: detailsErrorCount,
+                    shipping_success: shippingSuccessCount,
+                    shipping_error: shippingErrorCount
+                }
+            };
+            
+            sessionStorage.setItem('batchResults', JSON.stringify(batchResults));
+            
+            // Mostrar botão para visualizar resultados detalhados
+            document.getElementById('view-batch-results-button').style.display = 'inline-block';
+            
+            // Show batch details in a nicer way on the page
+            if (confirm('Processamento automático concluído. Deseja visualizar os resultados detalhados?')) {
+                showBatchResults(batchResults);
+            }
+        }
+        
+        // Display batch results directly in the page
+        function showBatchResults(results) {
+            // Create a modal for better presentation
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            
+            const content = document.createElement('div');
+            content.className = 'modal-content';
+            content.style.width = '90%';
+            content.style.maxWidth = '1200px';
+            
+            // Header
+            const header = document.createElement('div');
+            header.className = 'modal-header';
+            header.innerHTML = `
+                <h2>Resultados do Processamento em Lote</h2>
+                <span class="close-modal">&times;</span>
+            `;
+            
+            // Body
+            const body = document.createElement('div');
+            body.className = 'modal-body';
+            
+            // Summary
+            const summary = document.createElement('div');
+            summary.className = 'alert ' + (results.overall_success ? 'alert-success' : 'alert-warning');
+            summary.innerHTML = `<h3>Resumo</h3><p>${results.message}</p>`;
+            
+            // Create tabs
+            const tabs = document.createElement('div');
+            tabs.className = 'tabs';
+            tabs.innerHTML = `
+                <div class="tab active" data-tab="details">Detalhes</div>
+                <div class="tab" data-tab="shipping">Frete</div>
+            `;
+            
+            // Create tab content
+            const tabContents = document.createElement('div');
+            tabContents.className = 'batch-tabs-content';
+            
+            // Details tab
+            const detailsTab = document.createElement('div');
+            detailsTab.className = 'tab-content active';
+            detailsTab.id = 'details-tab';
+            detailsTab.innerHTML = `
+                <h3>Processamento de Detalhes</h3>
+                <p><strong>Sucessos:</strong> ${results.metrics.details_success} | <strong>Falhas:</strong> ${results.metrics.details_error}</p>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID da Venda</th>
+                                <th>Status</th>
+                                <th>Mensagem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.details_results.map(r => `
+                                <tr>
+                                    <td>${r.sale_id}</td>
+                                    <td><span class="badge badge-${r.success ? 'success' : 'danger'}">${r.success ? 'Sucesso' : 'Falha'}</span></td>
+                                    <td>${r.message}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            // Shipping tab
+            const shippingTab = document.createElement('div');
+            shippingTab.className = 'tab-content';
+            shippingTab.id = 'shipping-tab';
+            shippingTab.innerHTML = `
+                <h3>Validação de Frete</h3>
+                <p><strong>Sucessos:</strong> ${results.metrics.shipping_success} | <strong>Falhas:</strong> ${results.metrics.shipping_error}</p>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID do Envio</th>
+                                <th>ID da Venda</th>
+                                <th>Status</th>
+                                <th>Mensagem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.shipping_results.map(r => `
+                                <tr>
+                                    <td>${r.shipping_id}</td>
+                                    <td>${r.sale_id}</td>
+                                    <td><span class="badge badge-${r.success ? 'success' : 'danger'}">${r.success ? 'Sucesso' : 'Falha'}</span></td>
+                                    <td>${r.message}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            // Footer
+            const footer = document.createElement('div');
+            footer.className = 'modal-footer';
+            footer.innerHTML = `
+                <button class="btn btn-secondary close-modal">Fechar</button>
+            `;
+            
+            // Add everything to the document
+            tabContents.appendChild(detailsTab);
+            tabContents.appendChild(shippingTab);
+            
+            body.appendChild(summary);
+            body.appendChild(tabs);
+            body.appendChild(tabContents);
+            
+            content.appendChild(header);
+            content.appendChild(body);
+            content.appendChild(footer);
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Add event listeners
+            modal.querySelectorAll('.close-modal').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.body.removeChild(modal);
+                });
+            });
+            
+            // Tab switching
+            tabs.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+                    
+                    // Hide all tab contents
+                    tabContents.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    // Show selected tab content
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+        }
+
+    </script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    
+    <!-- Menu Script -->
+    <script src="js/components/menu.js"></script>
+    
+    <script>
+        // Inicialização do menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    const menuContainer = document.getElementById('floating-menu-container');
+                    if (menuContainer) {
+                        menuContainer.classList.toggle('expanded');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+                            });
+                        });
+                    } else {
+                        salesResultsElement.innerHTML = `
+                            <div class="alert alert-info">
+                                Nenhuma venda encontrada no período de ${Utils.formatDate(fromDate)} a ${Utils.formatDate(toDate)}.
+                            </div>
+                        `;
+                    }
+                } else {
+                    salesResultsElement.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível carregar as vendas.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('sales-loading');
+                
+                // Display error message
+                const salesError = document.getElementById('sales-error');
+                salesError.textContent = `Erro ao carregar vendas: ${error.message}`;
+                salesError.style.display = 'block';
+                
+                // Update sales element
+                const salesResultsElement = document.getElementById('sales-results');
+                salesResultsElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao carregar as vendas.
+                    </div>
+                `;
+            }
+        }
+
+        // Generate sample sales data for demonstration
+        function generateSampleSales(count) {
+            const sales = [];
+            const statuses = ['completed', 'pending', 'cancelled'];
+            
+            for (let i = 1; i <= count; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+                
+                sales.push({
+                    id: `ML${100000 + i}`,
+                    date: date.toISOString(),
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    total: Math.random() * 1000 + 50
+                });
+            }
+            
+            return sales;
+        }
+
+        // Show sale details
+        async function showSaleDetails(saleId) {
+            // Show the modal
+            const modal = document.getElementById('sale-details-modal');
+            modal.style.display = 'block';
+            
+            // Show loading spinner
+            Utils.showLoading('sale-details-loading');
+            
+            // Hide error message
+            Utils.hideError('sale-details-error');
+            
+            try {
+                // Fetch sale details from API
+                const saleDetails = await ApiService.getItem(saleId);
+                
+                // Hide loading spinner
+                Utils.hideLoading('sale-details-loading');
+                
+                // Display sale details
+                const saleDetailsContent = document.getElementById('sale-details-content');
+                
+                if (!saleDetails) {
+                    saleDetailsContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            Não foi possível carregar os detalhes da venda ${saleId}.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Get buyer info
+                const buyer = saleDetails.buyer || {};
+                const buyerName = buyer.nickname || buyer.name || 'Não disponível';
+                const buyerEmail = buyer.email || 'Não disponível';
+                
+                // Get items
+                const items = saleDetails.order_items || [];
+                
+                // Get shipping info
+                const shipping = saleDetails.shipping || {};
+                const shippingStatus = shipping.status || 'Não disponível';
+                const shippingCost = shipping.cost || 0;
+                const shippingAddress = shipping.address_line || 'Não disponível';
+                
+                // Get payment info
+                const payment = saleDetails.payments && saleDetails.payments.length > 0 ? 
+                    saleDetails.payments[0] : {};
+                const paymentMethod = payment.payment_method_id || 'Não disponível';
+                const paymentStatus = payment.status || 'Não disponível';
+                const paymentTotal = payment.total_paid_amount || saleDetails.total_amount || 0;
+                
+                // Display sale details
+                saleDetailsContent.innerHTML = `
+                    <div class="row mb-3">
+                        <div class="col">
+                            <h3>Informações da Venda</h3>
+                            <p><strong>ID:</strong> ${saleDetails.id}</p>
+                            <p><strong>Data:</strong> ${Utils.formatDate(saleDetails.date_created || saleDetails.date)}</p>
+                            <p><strong>Status:</strong> ${saleDetails.status || 'Não disponível'}</p>
+                            <p><strong>Total:</strong> ${Utils.formatCurrency(saleDetails.total_amount || saleDetails.total || 0)}</p>
+                        </div>
+                        <div class="col">
+                            <h3>Informações do Comprador</h3>
+                            <p><strong>Nome:</strong> ${buyerName}</p>
+                            <p><strong>Email:</strong> ${buyerEmail}</p>
+                        </div>
+                    </div>
+                    
+                    <h3>Itens</h3>
+                    <div class="table-responsive mb-3">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Título</th>
+                                    <th>Quantidade</th>
+                                    <th>Preço</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.length > 0 ? items.map(item => {
+                                    const itemTotal = (item.unit_price || 0) * (item.quantity || 0);
+                                    return `
+                                        <tr>
+                                            <td>${item.item_id || item.id || 'N/A'}</td>
+                                            <td>${item.title || 'Não disponível'}</td>
+                                            <td>${item.quantity || 0}</td>
+                                            <td>${Utils.formatCurrency(item.unit_price || 0)}</td>
+                                            <td>${Utils.formatCurrency(itemTotal)}</td>
+                                        </tr>
+                                    `;
+                                }).join('') : '<tr><td colspan="5">Nenhum item disponível</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col">
+                            <h3>Informações de Envio</h3>
+                            <p><strong>Status:</strong> ${shippingStatus}</p>
+                            <p><strong>Custo:</strong> ${Utils.formatCurrency(shippingCost)}</p>
+                            <p><strong>Endereço:</strong> ${shippingAddress}</p>
+                        </div>
+                        <div class="col">
+                            <h3>Informações de Pagamento</h3>
+                            <p><strong>Método:</strong> ${paymentMethod}</p>
+                            <p><strong>Status:</strong> ${paymentStatus}</p>
+                            <p><strong>Total:</strong> ${Utils.formatCurrency(paymentTotal)}</p>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                // Hide loading spinner
+                Utils.hideLoading('sale-details-loading');
+                
+                // Display error message
+                const saleDetailsError = document.getElementById('sale-details-error');
+                saleDetailsError.textContent = `Erro ao carregar detalhes da venda: ${error.message}`;
+                saleDetailsError.style.display = 'block';
+                
+                // Update sale details content
+                const saleDetailsContent = document.getElementById('sale-details-content');
+                saleDetailsContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        Ocorreu um erro ao carregar os detalhes da venda.
+                    </div>
+                `;
+            }
+        }
+
+        // Close the modal
+        function closeModal() {
+            const modal = document.getElementById('sale-details-modal');
+            modal.style.display = 'none';
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check authentication status
+            const isAuthenticated = await checkAuthStatus();
+            
+            // Set default date range
+            setDefaultDateRange();
+            
+            // Load all sales by default
+            if (isAuthenticated) {
+                // Get a large date range to fetch all sales (past 12 months)
+                const toDate = new Date();
+                const fromDate = new Date();
+                fromDate.setFullYear(fromDate.getFullYear() - 1); // 1 year ago
+                
+                loadSales(fromDate.toISOString().split('T')[0], toDate.toISOString().split('T')[0]);
+            }
+            
+            // Add event listener for the form submission (for filtered searches)
+            document.getElementById('sales-filter-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                if (!isAuthenticated) {
+                    alert('Você precisa estar autenticado para buscar vendas.');
+                    return;
+                }
+                
+                const fromDate = document.getElementById('from-date').value;
+                const toDate = document.getElementById('to-date').value;
+                
+                loadSales(fromDate, toDate);
+            });
+            
+            // Add event listener for the reset button
+            document.getElementById('reset-filter-button').addEventListener('click', function() {
+                setDefaultDateRange();
+            });
+            
+            // Add event listeners for the modal close buttons
+            document.querySelectorAll('.close-modal').forEach(button => {
+                button.addEventListener('click', closeModal);
+            });
+            
+            // Close the modal when clicking outside of it
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('sale-details-modal');
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

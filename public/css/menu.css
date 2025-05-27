@@ -1,0 +1,270 @@
+/**
+ * Floating Menu Styles for Mercado Livre Product App
+ * These styles create a responsive floating menu with dropdowns
+ */
+
+/* ===== Menu Icons ===== */
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  src: url('https://fonts.googleapis.com/icon?family=Material+Icons');
+}
+
+.menu-icon {
+  display: inline-block;
+  font-size: 24px;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.icon-home::before { content: "🏠"; }
+.icon-key::before { content: "🔑"; }
+.icon-cart::before { content: "🛒"; }
+.icon-box::before { content: "📦"; }
+.icon-truck::before { content: "🚚"; }
+.icon-user::before { content: "👤"; }
+
+.menu-arrow::before {
+  content: "▼";
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+/* ===== Floating Menu Container ===== */
+.floating-menu-container {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: var(--primary-color);
+  color: white;
+  z-index: 999;
+  box-shadow: var(--box-shadow-lg);
+  transition: transform 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Menu Header */
+.menu-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-header .brand {
+  display: flex;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  text-decoration: none;
+}
+
+.menu-logo {
+  height: 32px;
+  width: 32px;
+  margin-right: 12px;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.menu-icon {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  position: relative;
+}
+
+.menu-icon::before,
+.menu-icon::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background-color: white;
+  left: 0;
+  transition: transform 0.3s;
+}
+
+.menu-icon::before {
+  top: 8px;
+}
+
+.menu-icon::after {
+  bottom: 8px;
+}
+
+.menu-icon span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background-color: white;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: opacity 0.3s;
+}
+
+/* Menu List */
+.menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.menu-item {
+  position: relative;
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+.menu-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+}
+
+.menu-link.active {
+  background-color: var(--accent-color);
+  color: var(--primary-color);
+}
+
+/* Submenu */
+.submenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease-out;
+}
+
+.menu-item.has-submenu.open .submenu {
+  max-height: 500px; /* Adjust based on your submenu height */
+}
+
+.submenu-item {
+  margin: 0;
+}
+
+.submenu-link {
+  display: block;
+  padding: 12px 20px 12px 56px;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.3s;
+  font-size: 0.9rem;
+}
+
+.submenu-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+}
+
+.submenu-link.active {
+  background-color: rgba(255, 255, 255, 0.15);
+  font-weight: bold;
+}
+
+/* ===== Body Adjustments ===== */
+body.with-floating-menu {
+  padding-left: 280px;
+}
+
+/* ===== Responsive Behavior ===== */
+@media (max-width: 992px) {
+  .floating-menu-container {
+    transform: translateX(-100%);
+  }
+  
+  .floating-menu-container.expanded {
+    transform: translateX(0);
+  }
+  
+  .menu-toggle {
+    display: block;
+  }
+  
+  body.with-floating-menu {
+    padding-left: 0;
+  }
+  
+  /* Hamburger menu animation */
+  .floating-menu-container.expanded .menu-icon::before {
+    transform: translateY(4px) rotate(45deg);
+  }
+  
+  .floating-menu-container.expanded .menu-icon::after {
+    transform: translateY(-4px) rotate(-45deg);
+  }
+  
+  .floating-menu-container.expanded .menu-icon span {
+    opacity: 0;
+  }
+  
+  /* Add mobile menu toggle button for small screens */
+  .mobile-menu-toggle {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: var(--box-shadow);
+  }
+  
+  /* Adjust content spacing for mobile */
+  .container {
+    padding-top: 70px;
+  }
+}
+
+/* ===== Tablet Adjustments ===== */
+@media (min-width: 768px) and (max-width: 992px) {
+  .floating-menu-container {
+    width: 240px;
+  }
+  
+  body.with-floating-menu.menu-visible {
+    padding-left: 240px;
+  }
+}
+
+/* ===== Small Display Adjustments ===== */
+@media (max-width: 576px) {
+  .floating-menu-container {
+    width: 100%;
+  }
+}

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validação de Frete 2025</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="icon" href="images/favicon.ico">
+    <style>
+        .json-display {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .dimension-info {
+            padding: 10px;
+            border-left: 3px solid #007bff;
+            margin-bottom: 10px;
+            background-color: #f1f8ff;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: #e7f1ff;
+            color: #0d6efd;
+        }
+        .bg-status-correto {
+            background-color: #d1e7dd;
+        }
+        .bg-status-cobrando-menos {
+            background-color: #fff3cd;
+        }
+        .bg-status-cobrando-mais {
+            background-color: #f8d7da;
+        }
+        .bg-status-erro {
+            background-color: #f8d7da;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 123, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #007bff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .history-item {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .history-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Mobile menu button styles */
+        @media (max-width: 992px) {
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1000;
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                width: 40px;
+                height: 40px;
+                text-align: center;
+                line-height: 40px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            
+            .container {
+                padding-top: 60px;
+            }
+        }
+        
+        /* Version selector styles */
+        .version-selector {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .version-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .version-2025 {
+            background-color: #198754;
+            color: white;
+        }
+        .version-atual {
+            background-color: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle Button (só aparece em telas pequenas) -->
+    <div class="d-block d-lg-none">
+        <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <span>☰</span>
+        </button>
+    </div>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Validação de Frete Mercado Livre</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="version-selector">
+                            <h5 class="mb-3">Selecione a Versão da Tabela de Frete</h5>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="btn-group" role="group" aria-label="Versão da tabela">
+                                    <input type="radio" class="btn-check" name="version" id="version-atual" autocomplete="off">
+                                    <label class="btn btn-outline-primary" for="version-atual">Tabela Atual</label>
+                                    
+                                    <input type="radio" class="btn-check" name="version" id="version-2025" autocomplete="off" checked>
+                                    <label class="btn btn-outline-success" for="version-2025">Tabela 2025</label>
+                                </div>
+                            </div>
+                            <div class="alert alert-info mt-3">
+                                <small><i class="bi bi-info-circle"></i> A Tabela 2025 utiliza novas faixas de preço e inclui descontos baseados na reputação do vendedor.</small>
+                            </div>
+                        </div>
+                        
+                        <p class="card-text">Validação de frete do Mercado Livre: verifique se o valor cobrado está correto de acordo com a tabela selecionada.</p>
+                        
+                        <form id="validationForm" class="mb-4">
+                            <div class="mb-3">
+                                <label for="shippingId" class="form-label">ID do Shipping</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="shippingId" name="shippingId" placeholder="Exemplo: 44343234077" required>
+                                    <button type="submit" class="btn btn-primary" id="validateBtn">Validar Frete</button>
+                                    <button type="button" class="btn btn-info" id="listItemsBtn">Listar Itens</button>
+                                </div>
+                                <div class="form-text">Informe o ID de Shipping (ex: 44343234077) para validar o frete ou listar os itens.</div>
+                            </div>
+                        </form>
+                        
+                        <div class="accordion" id="resultsAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="resultHeading">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#resultCollapse" aria-expanded="true" aria-controls="resultCollapse">
+                                        Resultado da Validação
+                                    </button>
+                                </h2>
+                                <div id="resultCollapse" class="accordion-collapse collapse show" aria-labelledby="resultHeading">
+                                    <div class="accordion-body">
+                                        <div id="resultContainer" class="d-none">
+                                            <div id="currentVersionBadge" class="version-badge version-2025">Tabela 2025</div>
+                                            <div id="statusBadge" class="alert mb-3"></div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">Frete Calculado</div>
+                                                        <div class="card-body">
+                                                            <h3 id="calculatedFreight" class="mb-0 text-primary">-</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">Frete Cobrado</div>
+                                                        <div class="card-body">
+                                                            <h3 id="chargedFreight" class="mb-0 text-primary">-</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">Diferença</div>
+                                                        <div class="card-body">
+                                                            <h3 id="freightDifference" class="mb-0">-</h3>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Shipping ID:</label>
+                                                        <div id="resultShippingId" class="form-control-plaintext">-</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Coluna de Frete:</label>
+                                                        <div id="freightColumn" class="form-control-plaintext">-</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div id="rawResultContainer">
+                                                <h6 class="mt-3">Resposta JSON Completa:</h6>
+                                                <pre id="rawResult" class="json-display"></pre>
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="loadingContainer" class="text-center d-none">
+                                            <div class="loading mb-2"></div>
+                                            <p>Processando validação...</p>
+                                        </div>
+                                        
+                                        <div id="emptyResult" class="text-center">
+                                            <p class="text-muted">Nenhuma validação realizada ainda. Informe um Shipping ID e clique em "Validar Frete".</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="itemsHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#itemsCollapse" aria-expanded="false" aria-controls="itemsCollapse">
+                                        Itens do Pacote
+                                    </button>
+                                </h2>
+                                <div id="itemsCollapse" class="accordion-collapse collapse" aria-labelledby="itemsHeading">
+                                    <div class="accordion-body">
+                                        <div id="itemsContainer" class="d-none">
+                                            <h5 id="itemsTitle" class="mb-3">Itens do Pacote</h5>
+                                            <div id="itemsList"></div>
+                                            <div id="rawItemsContainer">
+                                                <h6 class="mt-3">Resposta JSON Completa:</h6>
+                                                <pre id="rawItems" class="json-display"></pre>
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="loadingItemsContainer" class="text-center d-none">
+                                            <div class="loading mb-2"></div>
+                                            <p>Buscando itens...</p>
+                                        </div>
+                                        
+                                        <div id="emptyItems" class="text-center">
+                                            <p class="text-muted">Nenhum item listado ainda. Informe um Shipping ID e clique em "Listar Itens".</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="historyHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#historyCollapse" aria-expanded="false" aria-controls="historyCollapse">
+                                        Histórico de Validações
+                                    </button>
+                                </h2>
+                                <div id="historyCollapse" class="accordion-collapse collapse" aria-labelledby="historyHeading">
+                                    <div class="accordion-body">
+                                        <div id="historyContainer">
+                                            <div id="historyList" class="list-group"></div>
+                                            <div id="emptyHistory" class="text-center">
+                                                <p class="text-muted">Nenhuma validação no histórico.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Validação em Lote</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Valide múltiplos IDs de Shipping de uma vez.</p>
+                        
+                        <form id="batchForm" class="mb-4">
+                            <div class="mb-3">
+                                <label for="batchIds" class="form-label">IDs de Shipping (um por linha)</label>
+                                <textarea class="form-control" id="batchIds" rows="4" placeholder="Exemplo:&#10;44343234077&#10;44343234078" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="batchValidateBtn">Validar em Lote</button>
+                        </form>
+                        
+                        <div id="batchResultContainer" class="d-none">
+                            <h5 class="mb-3">Resultados do Lote</h5>
+                            <div class="alert alert-info mb-3" id="batchSummary"></div>
+                            <div id="batchResults"></div>
+                            <div id="rawBatchResultContainer">
+                                <h6 class="mt-3">Resposta JSON Completa:</h6>
+                                <pre id="rawBatchResult" class="json-display"></pre>
+                            </div>
+                        </div>
+                        
+                        <div id="loadingBatchContainer" class="text-center d-none">
+                            <div class="loading mb-2"></div>
+                            <p>Processando validações em lote...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white mt-5 py-3">
+        <div class="container text-center">
+            <p class="mb-0">Validação de Frete - Tabela 2025 | Mercado Livre</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components/menu.js"></script>
+    <script src="js/freight-validation-2025.js"></script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+BEGIN TRANSACTION;
+CREATE TABLE IF NOT EXISTS "DetalhesVendas" (
+	"id"	INTEGER,
+	"venda_id"	VARCHAR(255) NOT NULL,
+	"order_item_id"	VARCHAR(255) NOT NULL,
+	"date_created"	DATETIME,
+	"total_amount"	REAL,
+	"currency_id"	VARCHAR(255),
+	"buyer_id"	VARCHAR(255),
+	"buyer_nickname"	VARCHAR(255),
+	"status"	VARCHAR(255),
+	"shipping_cost"	REAL,
+	"shipping_id"	VARCHAR(255),
+	"height"	REAL,
+	"width"	REAL,
+	"length"	REAL,
+	"weight"	REAL,
+	"volume"	REAL,
+	"senders_cost"	REAL,
+	"category_id"	VARCHAR(255),
+	"is_special_category"	INTEGER,
+	"logistic_type"	VARCHAR(255),
+	"is_fulfillment"	INTEGER,
+	"pack_id"	VARCHAR(255),
+	"is_pack"	INTEGER,
+	"receiver_state"	VARCHAR(255),
+	"is_sulsudeste"	INTEGER,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "DetalhesVendas_backup" (
+	"id"	INTEGER,
+	"venda_id"	VARCHAR(255) NOT NULL UNIQUE,
+	"order_item_id"	VARCHAR(255) NOT NULL UNIQUE,
+	"date_created"	DATETIME,
+	"total_amount"	REAL,
+	"currency_id"	VARCHAR(255),
+	"buyer_id"	VARCHAR(255),
+	"buyer_nickname"	VARCHAR(255),
+	"status"	VARCHAR(255),
+	"shipping_cost"	REAL,
+	"shipping_id"	VARCHAR(255),
+	"height"	REAL,
+	"width"	REAL,
+	"length"	REAL,
+	"weight"	REAL,
+	"volume"	REAL,
+	"senders_cost"	REAL,
+	"category_id"	VARCHAR(255),
+	"is_special_category"	INTEGER,
+	"logistic_type"	VARCHAR(255),
+	"is_fulfillment"	INTEGER,
+	"pack_id"	VARCHAR(255),
+	"is_pack"	INTEGER,
+	"receiver_state"	VARCHAR(255),
+	"is_sulsudeste"	INTEGER,
+	PRIMARY KEY("id")
+);
+CREATE TABLE IF NOT EXISTS "DimensaoPacotes" (
+	"id"	INTEGER,
+	"shipment_id"	VARCHAR(255) NOT NULL UNIQUE,
+	"height"	REAL,
+	"width"	REAL,
+	"length"	REAL,
+	"weight"	REAL,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "Items" (
+	"id"	VARCHAR(255) NOT NULL,
+	"free_shipping"	TINYINT(1),
+	"logistic_type"	VARCHAR(255),
+	"category_id"	VARCHAR(255),
+	"original_price"	REAL,
+	"price"	REAL,
+	"base_price"	REAL,
+	"listing_type_id"	VARCHAR(255),
+	"condition"	VARCHAR(255),
+	"title"	TEXT,
+	"catalog_listing"	TINYINT(1),
+	"status"	VARCHAR(255),
+	"fixed_fee"	REAL,
+	"gross_amount"	REAL,
+	"percentage_fee"	REAL,
+	"shipping_options"	TEXT,
+	"list_cost"	REAL,
+	PRIMARY KEY("id")
+);
+CREATE TABLE IF NOT EXISTS "PlanilhaVendas" (
+	"id"	INTEGER,
+	"venda_id"	VARCHAR(255) NOT NULL,
+	"tarifa_envio"	REAL,
+	"receita_envio"	REAL,
+	"frete_validado"	REAL,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "SequelizeMeta" (
+	"name"	VARCHAR(255) NOT NULL UNIQUE,
+	PRIMARY KEY("name")
+);
+CREATE TABLE IF NOT EXISTS "TabelaFretes" (
+	"id"	INTEGER,
+	"peso_min"	REAL NOT NULL,
+	"peso_max"	REAL NOT NULL,
+	"reputacao"	VARCHAR(255) NOT NULL,
+	"tipo_anuncio"	VARCHAR(255) NOT NULL,
+	"regiao"	VARCHAR(255) NOT NULL,
+	"valor_frete"	REAL NOT NULL,
+	"full"	TINYINT(1) NOT NULL DEFAULT 0,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "Users" (
+	"id"	VARCHAR(255) NOT NULL,
+	"nickname"	VARCHAR(255),
+	"user_type"	VARCHAR(255),
+	"level_id"	VARCHAR(255),
+	"power_seller_status"	VARCHAR(255),
+	"transactions_completed"	INTEGER,
+	"sales_completed"	INTEGER,
+	"claims_value"	REAL,
+	"delayed_handling_time_value"	REAL,
+	"cancellations_value"	REAL,
+	PRIMARY KEY("id")
+);
+CREATE TABLE IF NOT EXISTS "ValidacaoFreteIndividuais" (
+	"id"	INTEGER,
+	"venda_id"	VARCHAR(255) NOT NULL UNIQUE,
+	"item_id"	VARCHAR(255),
+	"frete_esperado"	REAL,
+	"frete_pago"	REAL,
+	"status"	VARCHAR(255),
+	"shipping_options"	TEXT,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "ValidacaoFretes" (
+	"id"	INTEGER,
+	"venda_id"	VARCHAR(255) NOT NULL,
+	"item_id"	VARCHAR(255) NOT NULL,
+	"frete_esperado"	REAL,
+	"frete_pago"	REAL,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "Vendas" (
+	"id"	INTEGER,
+	"order_id"	VARCHAR(255) NOT NULL UNIQUE,
+	"date_created"	DATETIME NOT NULL,
+	"buyer_id"	VARCHAR(255),
+	"buyer_nickname"	VARCHAR(255),
+	"status"	VARCHAR(255),
+	"total_amount"	REAL,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "bdValidacaoFrete" (
+	"faixa_peso"	TEXT,
+	"CEOR_full_lider"	REAL,
+	"CEOR_full_verde"	REAL,
+	"CEOR_outros_lider"	INTEGER,
+	"CEOR_outros_verde"	INTEGER,
+	"CEOR_full_amarelo"	REAL,
+	"CEOR_full_sem"	REAL,
+	"CEOR_outros_amarelo"	INTEGER,
+	"CEOR_outros_sem"	INTEGER,
+	"CEOR_full_laranja"	REAL,
+	"CEOR_full_vermelho"	REAL,
+	"CEOR_outros_laranja"	INTEGER,
+	"CEOR_outros_vermelho"	INTEGER,
+	"CESS_full_lider"	REAL,
+	"CESS_outros_lider"	REAL,
+	"CESS_full_verde"	REAL,
+	"CESS_outros_verde"	REAL,
+	"CESS_full_amarelo"	REAL,
+	"CESS_full_sem"	REAL,
+	"CESS_outros_amarelo"	REAL,
+	"CESS_outros_sem"	REAL,
+	"CESS_full_laranja"	REAL,
+	"CESS_full_vermelho"	REAL,
+	"CESS_outros_laranja"	REAL,
+	"CESS_outros_vermelho"	REAL,
+	"CNOR_full_7899"	REAL,
+	"CNOR_outros_7899"	INTEGER,
+	"CNOR_full_79"	REAL,
+	"CNOR_outros_79"	INTEGER,
+	"CNOR_full_especiais"	REAL,
+	"CNOR_outros_especiais"	INTEGER,
+	"CNSS_full_7899"	REAL,
+	"CNSS_outros_7899"	REAL,
+	"CNSS_full_79"	REAL,
+	"CNSS_full_especiais"	REAL,
+	"CNSS_outros_79"	REAL,
+	"CNSS_outros_especiais"	REAL
+);
+CREATE TABLE IF NOT EXISTS "especiais_outras" (
+	"faixa_peso"	VARCHAR(255) NOT NULL,
+	"full_lider"	REAL,
+	"full_verde"	REAL,
+	"full_amarelo"	REAL,
+	"full_sem"	REAL,
+	"full_laranja"	REAL,
+	"full_vermelho"	REAL,
+	"outros_lider"	REAL,
+	"outros_verde"	REAL,
+	"outros_amarelo"	REAL,
+	"outros_sem"	REAL,
+	"outros_laranja"	REAL,
+	"outros_vermelho"	REAL,
+	PRIMARY KEY("faixa_peso")
+);
+CREATE TABLE IF NOT EXISTS "especiais_sul_sudeste" (
+	"faixa_peso"	VARCHAR(255) NOT NULL,
+	"full_lider"	REAL,
+	"outros_lider"	REAL,
+	"full_verde"	REAL,
+	"outros_verde"	REAL,
+	"full_amarelo"	REAL,
+	"full_sem"	REAL,
+	"outros_amarelo"	REAL,
+	"outros_sem"	REAL,
+	"full_laranja"	REAL,
+	"full_vermelho"	REAL,
+	"outros_laranja"	REAL,
+	"outros_vermelho"	REAL,
+	PRIMARY KEY("faixa_peso")
+);
+CREATE TABLE IF NOT EXISTS "grants" (
+	"user_id"	INTEGER,
+	"application_id"	BIGINT NOT NULL,
+	"date_created"	DATETIME,
+	"authorized"	TINYINT(1),
+	PRIMARY KEY("user_id")
+);
+CREATE TABLE IF NOT EXISTS "normal_outras" (
+	"faixa_peso"	VARCHAR(255) NOT NULL,
+	"full_7899"	REAL,
+	"outros_7899"	REAL,
+	"full_79"	REAL,
+	"outros_79"	REAL,
+	"full_especiais"	REAL,
+	"outros_especiais"	REAL,
+	PRIMARY KEY("faixa_peso")
+);
+CREATE TABLE IF NOT EXISTS "normal_sul_sudeste" (
+	"faixa_peso"	VARCHAR(255) NOT NULL,
+	"full_7899"	REAL,
+	"outros_7899"	REAL,
+	"full_79"	REAL,
+	"outro_79"	REAL,
+	"full_especiais"	REAL,
+	"outros_especiais"	REAL,
+	PRIMARY KEY("faixa_peso")
+);
+CREATE TABLE IF NOT EXISTS "special_categories" (
+	"category_id"	VARCHAR(255) NOT NULL,
+	PRIMARY KEY("category_id")
+);
+CREATE TABLE IF NOT EXISTS "validacao_pacotes" (
+	"shipping_id"	VARCHAR(255) NOT NULL,
+	"frete_calculado"	REAL,
+	"frete_cobrado_api"	REAL,
+	"coluna_tabela_usada"	VARCHAR(255),
+	"status_validacao"	VARCHAR(255) NOT NULL DEFAULT 'PENDENTE',
+	"item_ids"	TEXT,
+	"data_validacao"	DATETIME,
+	"mensagem_erro"	TEXT,
+	"venda_id"	VARCHAR(255),
+	"frete_ideal_reputacao_verde"	REAL,
+	PRIMARY KEY("shipping_id")
+);
+INSERT INTO "DetalhesVendas" VALUES (1,'2000009733225984','MLB5155604306','2024-11-04 01:46:28.000 +00:00',1200.0,'BRL','2068229527','TESTUSER561287714','paid',0.0,'44037161383',15.0,32.0,47.0,2.983,3.76,49.9,NULL,0,'drop_off',0,NULL,0,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (2,'2000010429979364','MLB5253119540','2025-01-11 14:55:49.000 +00:00',84.0,'BRL','2068229527','TESTUSER561287714','paid',0.0,'44343221217',8.0,15.0,23.0,0.21,0.46,24.54,'MLB3530',0,'drop_off',0,NULL,0,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (3,'2000010429979912','MLB5253222788','2025-01-11 14:56:46.000 +00:00',76.0,'BRL','2068229527','TESTUSER561287714','paid',0.0,'44343224177',7.0,25.0,34.0,0.425,0.9917,42.9,'MLB3530',0,'drop_off',0,NULL,0,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (4,'2000010430016852','MLB5253222788','2025-01-11 14:59:47.000 +00:00',76.0,'BRL','2068229527','TESTUSER561287714','paid',0.0,'44343234077',15.0,25.0,34.0,0.635,2.125,67.44,'MLB3530',0,'drop_off',0,'2000006997178761',1,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (5,'2000010430016854','MLB5253119540','2025-01-11 14:59:47.000 +00:00',84.0,'BRL','2068229527','TESTUSER561287714','paid',0.0,'44343234077',15.0,25.0,34.0,0.635,2.125,67.44,'MLB3530',0,'drop_off',0,'2000006997178761',1,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (6,'2000010430036864','MLB5253222788','2025-01-11 15:02:22.000 +00:00',152.0,'BRL','2068229527','TESTUSER561287714','paid',0.0,'44343443680',14.0,25.0,34.0,0.85,1.9833,85.8,'MLB3530',0,'drop_off',0,'2000006997195499',1,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (7,'2000010430044472','MLB5253210460','2025-01-11 15:03:02.000 +00:00',50.0,'BRL','2068229527','TESTUSER561287714','paid',13.01,'44343245515',2.0,24.0,30.0,0.317,0.317,0.0,'MLB3530',0,'drop_off',0,NULL,0,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (8,'2000010430056800','MLB5253210460','2025-01-11 15:04:45.000 +00:00',50.0,'BRL','2068229527','TESTUSER561287714','paid',13.01,'44343451550',2.0,24.0,30.0,0.317,0.317,0.0,'MLB3530',0,'drop_off',0,NULL,0,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (9,'2000010430053956','MLB5253119540','2025-01-11 15:06:13.000 +00:00',84.0,'BRL','2068229527','TESTUSER561287714','paid',18.13,'44343456138',8.0,15.0,23.0,0.21,0.46,24.54,'MLB3530',0,'drop_off',0,NULL,0,'São Paulo',1);
+INSERT INTO "DetalhesVendas" VALUES (10,'2000010430078544','MLB5253222788','2025-01-11 15:07:30.000 +00:00',76.0,'BRL','2068229527','TESTUSER561287714','paid',0.0,'44343460780',7.0,25.0,34.0,0.425,0.9917,42.9,'MLB3530',0,'drop_off',0,NULL,0,'São Paulo',1);
+INSERT INTO "DimensaoPacotes" VALUES (1,'44037161383',15.0,32.0,47.0,2983.0);
+INSERT INTO "DimensaoPacotes" VALUES (2,'44343221217',8.0,15.0,23.0,210.0);
+INSERT INTO "DimensaoPacotes" VALUES (3,'44343224177',7.0,25.0,34.0,425.0);
+INSERT INTO "DimensaoPacotes" VALUES (4,'44343234077',15.0,25.0,34.0,635.0);
+INSERT INTO "DimensaoPacotes" VALUES (6,'44343443680',14.0,25.0,34.0,850.0);
+INSERT INTO "DimensaoPacotes" VALUES (7,'44343245515',2.0,24.0,30.0,317.0);
+INSERT INTO "DimensaoPacotes" VALUES (8,'44343451550',2.0,24.0,30.0,317.0);
+INSERT INTO "DimensaoPacotes" VALUES (9,'44343456138',8.0,15.0,23.0,210.0);
+INSERT INTO "DimensaoPacotes" VALUES (10,'44343460780',7.0,25.0,34.0,425.0);
+INSERT INTO "Items" VALUES ('MLB5253119540',1,'drop_off','MLB3530',NULL,84.0,84.0,'gold_special','new','Item De Teste  Por Favor, Não Ofertar!',0,'active',0.0,10.08,12.0,NULL,NULL);
+INSERT INTO "Items" VALUES ('MLB5253222788',1,'drop_off','MLB3530',NULL,76.0,76.0,'gold_special','new','Item De Teste  Por Favor, Não Ofertar!',0,'active',6.75,15.87,12.0,NULL,NULL);
+INSERT INTO "Items" VALUES ('MLB5253210460',0,'drop_off','MLB3530',NULL,50.0,50.0,'gold_special','new','Item De Teste  Por Favor, Não Ofertar!',0,'active',6.75,12.75,12.0,NULL,NULL);
+INSERT INTO "SequelizeMeta" VALUES ('20250120021105-create_grants_table.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250501215135-create-validacao-pacotes.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202034-create-dimensao-pacotes.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202043-create-special-categories.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202050-create-detalhes-vendas.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202057-create-validacao-pacotes.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202103-create-grants.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202110-create-items.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202119-create-users.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202135-create-vendas.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202140-create-validacao-frete.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202146-create-validacao-frete-individuais.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202155-create-planilha-vendas.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202637-create-especiais-outras.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202641-create-especiais-sul-sudeste.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202648-create-normal-outras.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202652-create-normal-sul-sudeste.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250503202656-create-tabela-fretes.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250504234550-add-venda-id-to-validacao-pacotes.js');
+INSERT INTO "SequelizeMeta" VALUES ('20250509031540-add-frete-ideal-to-validacao-pacotes.js');
+INSERT INTO "Users" VALUES ('2068111645','TESTUSER2106595488','normal',NULL,NULL,0,0,0.0,0.0,0.0);
+INSERT INTO "ValidacaoFreteIndividuais" VALUES (1,'2000009733225984',NULL,NULL,NULL,'erro',NULL);
+INSERT INTO "bdValidacaoFrete" VALUES ('0-300',29.93,29.93,47.18,47.18,31.92,31.92,50.32,50.32,39.9,39.9,62.9,62.9,29.93,29.93,29.93,29.93,31.92,31.92,31.92,31.92,39.9,39.9,39.9,39.9,39.9,62.9,23.94,37.74,31.92,50.32,39.9,39.9,23.94,31.92,23.94,31.92);
+INSERT INTO "bdValidacaoFrete" VALUES ('301-500',30.68,30.68,48.68,48.68,32.72,32.72,51.92,51.92,40.9,40.9,64.9,64.9,30.68,30.68,30.68,30.68,32.72,32.72,32.72,32.72,40.9,40.9,40.9,40.9,40.9,64.9,24.54,38.94,32.72,51.92,40.9,40.9,24.54,32.72,24.54,32.72);
+INSERT INTO "bdValidacaoFrete" VALUES ('501-1000',32.18,32.18,51.68,51.68,34.32,34.32,55.12,55.12,42.9,42.9,68.9,68.9,32.18,32.18,32.18,32.18,34.32,34.32,34.32,34.32,42.9,42.9,42.9,42.9,42.9,68.9,25.74,41.34,34.32,55.12,42.9,42.9,25.74,34.32,25.74,34.32);
+INSERT INTO "bdValidacaoFrete" VALUES ('1001-2000',34.43,34.43,62.93,62.93,36.72,36.72,67.12,67.12,45.9,45.9,83.9,83.9,34.43,34.43,34.43,34.43,36.72,36.72,36.72,36.72,45.9,45.9,45.9,45.9,45.9,83.9,27.54,50.34,36.72,67.12,45.9,45.9,27.54,36.72,27.54,36.72);
+INSERT INTO "bdValidacaoFrete" VALUES ('2001-3000',35.93,35.93,79.8,79.8,38.32,38.32,85.12,85.12,47.9,47.9,106.4,106.4,35.93,35.93,35.93,35.93,38.32,38.32,38.32,38.32,47.9,47.9,47.9,47.9,47.9,106.4,28.74,63.84,38.32,85.12,47.9,47.9,28.74,38.32,28.74,38.32);
+INSERT INTO "bdValidacaoFrete" VALUES ('3001-4000',37.43,37.43,82.2,82.2,39.92,39.92,87.68,87.68,49.9,49.9,109.6,109.6,37.43,37.43,37.43,37.43,39.92,39.92,39.92,39.92,49.9,49.9,49.9,49.9,49.9,109.6,29.94,65.76,39.92,87.68,49.9,49.9,29.94,39.92,29.94,39.92);
+INSERT INTO "bdValidacaoFrete" VALUES ('4001-5000',38.93,38.93,84.53,84.53,41.52,41.52,90.16,90.16,51.9,51.9,112.7,112.7,38.93,38.93,38.93,38.93,41.52,41.52,41.52,41.52,51.9,51.9,51.9,51.9,51.9,112.7,31.14,67.62,41.52,90.16,51.9,51.9,31.14,41.52,31.14,41.52);
+INSERT INTO "bdValidacaoFrete" VALUES ('5001-9000',62.93,62.93,97.88,97.88,67.12,67.12,104.4,104.4,83.9,83.9,130.5,130.5,62.93,62.93,62.93,62.93,67.12,67.12,67.12,67.12,83.9,83.9,83.9,83.9,83.9,130.5,50.34,78.3,67.12,104.4,83.9,83.9,50.34,67.12,50.34,67.12);
+INSERT INTO "bdValidacaoFrete" VALUES ('9001-13000',98.93,98.93,142.35,142.35,105.52,105.52,151.84,151.84,131.9,131.9,189.8,189.8,98.93,98.93,98.93,98.93,105.52,105.52,105.52,105.52,131.9,131.9,131.9,131.9,131.9,189.8,79.14,113.88,105.52,151.84,131.9,131.9,79.14,105.52,79.14,105.52);
+INSERT INTO "bdValidacaoFrete" VALUES ('13001-17000',110.18,110.18,187.58,187.58,117.52,117.52,200.08,200.08,146.9,146.9,250.1,250.1,110.18,110.18,110.18,110.18,117.52,117.52,117.52,117.52,146.9,146.9,146.9,146.9,146.9,250.1,88.14,150.06,117.52,200.08,146.9,146.9,88.14,117.52,88.14,117.52);
+INSERT INTO "bdValidacaoFrete" VALUES ('17001-23000',128.93,128.93,210.83,210.83,137.52,137.52,224.88,224.88,171.9,171.9,281.1,281.1,128.93,128.93,128.93,128.93,137.52,137.52,137.52,137.52,171.9,171.9,171.9,171.9,171.9,281.1,103.14,168.66,137.52,224.88,171.9,171.9,103.14,137.52,103.14,137.52);
+INSERT INTO "bdValidacaoFrete" VALUES ('23001-30000',148.43,148.43,220.05,220.05,158.32,158.32,234.72,234.72,197.9,197.9,293.4,293.4,148.43,148.43,148.43,148.43,158.32,158.32,158.32,158.32,197.9,197.9,197.9,197.9,197.9,293.4,118.74,176.04,158.32,234.72,197.9,197.9,118.74,158.32,118.74,158.32);
+INSERT INTO "bdValidacaoFrete" VALUES ('30001-40000',164.18,164.18,225,225,175.12,175.12,240,240,218.9,218.9,300,300,164.18,164.18,164.18,164.18,175.12,175.12,175.12,175.12,218.9,218.9,218.9,218.9,218.9,300,131.34,180,175.12,240,218.9,218.9,131.34,175.12,131.34,175.12);
+INSERT INTO "bdValidacaoFrete" VALUES ('40001-50000',175.43,175.43,233.78,233.78,187.12,187.12,249.36,249.36,233.9,233.9,311.7,311.7,175.43,175.43,175.43,175.43,187.12,187.12,187.12,187.12,233.9,233.9,233.9,233.9,233.9,311.7,140.34,187.02,187.12,249.36,233.9,233.9,140.34,187.12,140.34,187.12);
+INSERT INTO "bdValidacaoFrete" VALUES ('50001-60000',187.43,187.43,250.65,250.65,199.92,199.92,267.36,267.36,249.9,249.9,334.2,334.2,187.43,187.43,187.43,187.43,199.92,199.92,199.92,199.92,249.9,249.9,249.9,249.9,249.9,334.2,149.94,200.52,199.92,267.36,249.9,249.9,149.94,199.92,149.94,199.92);
+INSERT INTO "bdValidacaoFrete" VALUES ('60001-70000',212.18,212.18,272.55,272.55,226.32,226.32,290.72,290.72,282.9,282.9,363.4,363.4,212.18,212.18,212.18,212.18,226.32,226.32,226.32,226.32,282.9,282.9,282.9,282.9,282.9,363.4,169.74,218.04,226.32,290.72,282.9,282.9,169.74,226.32,169.74,226.32);
+INSERT INTO "bdValidacaoFrete" VALUES ('70001-80000',235.43,235.43,292.28,292.28,251.12,251.12,311.76,311.76,313.9,313.9,389.7,389.7,235.43,235.43,235.43,235.43,251.12,251.12,251.12,251.12,313.9,313.9,313.9,313.9,313.9,389.7,188.34,233.82,251.12,311.76,313.9,313.9,188.34,251.12,188.34,251.12);
+INSERT INTO "bdValidacaoFrete" VALUES ('80001-90000',262.43,262.43,311.55,311.55,279.92,279.92,332.32,332.32,349.9,349.9,415.4,415.4,262.43,262.43,262.43,262.43,279.92,279.92,279.92,279.92,349.9,349.9,349.9,349.9,349.9,415.4,209.94,249.24,279.92,332.32,349.9,349.9,209.94,279.92,209.94,279.92);
+INSERT INTO "bdValidacaoFrete" VALUES ('90001-100000',299.93,299.93,342.08,342.08,319.92,319.92,364.88,364.88,399.9,399.9,456.1,456.1,299.93,299.93,299.93,299.93,319.92,319.92,319.92,319.92,399.9,399.9,399.9,399.9,399.9,456.1,239.94,273.66,319.92,364.88,399.9,399.9,239.94,319.92,239.94,319.92);
+INSERT INTO "bdValidacaoFrete" VALUES ('100001-125000',335.18,335.18,366.45,366.45,357.52,357.52,390.88,390.88,446.9,446.9,488.6,488.6,335.18,335.18,335.18,335.18,357.52,357.52,357.52,357.52,446.9,446.9,446.9,446.9,446.9,488.6,268.14,293.16,357.52,390.88,446.9,446.9,268.14,357.52,268.14,357.52);
+INSERT INTO "bdValidacaoFrete" VALUES ('125001-150000',356.18,356.18,390.68,390.68,379.92,379.92,416.72,416.72,474.9,474.9,520.9,520.9,356.18,356.18,356.18,356.18,379.92,379.92,379.92,379.92,474.9,474.9,474.9,474.9,474.9,520.9,284.94,312.54,379.92,416.72,474.9,474.9,284.94,379.92,284.94,379.92);
+INSERT INTO "bdValidacaoFrete" VALUES ('150001-',374.18,374.18,409.58,409.58,399.12,399.12,436.88,436.88,498.9,498.9,546.1,546.1,374.18,374.18,374.18,374.18,399.12,399.12,399.12,399.12,498.9,498.9,498.9,498.9,498.9,546.1,299.34,327.66,399.12,436.88,498.9,498.9,299.34,399.12,299.34,399.12);
+INSERT INTO "validacao_pacotes" VALUES ('44037161383',NULL,49.9,NULL,'ERRO_SEM_ITEM_API','["MLB5155604306"]','2025-05-10 20:27:21.344 +00:00','Não foi possível obter detalhes/quantidade da API para nenhum item do pacote.','2000009733225984',NULL);
+INSERT INTO "validacao_pacotes" VALUES ('44343221217',40.9,24.54,'cess_outros_vermelho','DIVERGENTE','["MLB5253119540"]','2025-05-10 19:27:18.229 +00:00',NULL,'2000010429979364',NULL);
+INSERT INTO "validacao_pacotes" VALUES ('44343224177',42.9,42.9,'cess_outros_vermelho','OK','["MLB5253222788"]','2025-05-10 19:27:19.430 +00:00',NULL,'2000010429979912',NULL);
+INSERT INTO "validacao_pacotes" VALUES ('44343234077',47.9,67.44,'cess_outros_vermelho','DIVERGENTE','["MLB5253222788","MLB5253119540"]','2025-05-10 19:27:20.598 +00:00',NULL,'2000010430016852',NULL);
+INSERT INTO "validacao_pacotes" VALUES ('44343443680',45.9,85.8,'cess_outros_vermelho_ERRO','ERRO_PROCESSAMENTO','["MLB5253222788"]','2025-05-10 19:27:21.785 +00:00','calcularPesoVolumetricoKg is not defined','2000010430036864',NULL);
+INSERT INTO "validacao_pacotes" VALUES ('44343245515',40.9,0.0,'cess_outros_vermelho','COMPRADOR_PAGOU','["MLB5253210460"]','2025-05-10 19:27:22.942 +00:00',NULL,'2000010430044472',NULL);
+INSERT INTO "validacao_pacotes" VALUES ('44343451550',40.9,0.0,'cess_outros_vermelho','COMPRADOR_PAGOU','["MLB5253210460"]','2025-05-10 19:27:24.077 +00:00',NULL,'2000010430056800',NULL);
+INSERT INTO "validacao_pacotes" VALUES ('44343456138',40.9,24.54,'cess_outros_vermelho','DIVERGENTE','["MLB5253119540"]','2025-05-10 19:27:25.323 +00:00',NULL,'2000010430053956',NULL);
+INSERT INTO "validacao_pacotes" VALUES ('44343460780',42.9,42.9,'cess_outros_vermelho','OK','["MLB5253222788"]','2025-05-10 19:27:26.530 +00:00',NULL,'2000010430078544',NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS "detalhesvendas_venda_item_unique_idx" ON "DetalhesVendas" (
+	"venda_id",
+	"order_item_id"
+);
+CREATE INDEX IF NOT EXISTS "validacao_pacotes_venda_id_idx" ON "validacao_pacotes" (
+	"venda_id"
+);
+COMMIT;
