@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# Se o arquivo solicitado existir, servir diretamente
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Se for uma solicitação para o diretório /api, redirecionar para o Node.js
+RewriteRule ^api(/.*)?$ http://localhost:3000/api$1 [P,L]
+
+# Se não for um arquivo ou diretório existente, redirecionar para index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

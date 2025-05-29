@@ -1,21 +1,24 @@
 {
   "development": {
     "dialect": "sqlite",
-     "storage": "src/database.sqlite",
-      "migrationsDir": "migrations",
-     "seederStorage": "sequelize"
-    },
-   "test": {
-     "dialect": "sqlite",
-     "storage": "src/database.sqlite",
-      "migrationsDir": "migrations",
-     "seederStorage": "sequelize"
-
+    "storage": "src/database.sqlite",
+    "migrationsDir": "migrations",
+    "seederStorage": "sequelize"
+  },
+  "test": {
+    "dialect": "sqlite",
+    "storage": "src/database.sqlite",
+    "migrationsDir": "migrations",
+    "seederStorage": "sequelize"
   },
   "production": {
-     "dialect": "sqlite",
-     "storage": "src/database.sqlite",
-     "migrationsDir": "migrations",
-     "seederStorage": "sequelize"
+    "dialect": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "database": "freteok",
+    "username": "root",
+    "password": "password",
+    "migrationsDir": "migrations",
+    "seederStorage": "sequelize"
   }
 }
