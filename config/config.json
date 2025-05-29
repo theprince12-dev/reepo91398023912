@@ -13,11 +13,11 @@
   },
   "production": {
     "dialect": "mysql",
-    "host": "localhost",
+    "host": "mysql.freteok.com.br",
     "port": 3306,
     "database": "freteok",
-    "username": "root",
-    "password": "password",
+    "username": "freteok",
+    "password": "freteok1",
     "migrationsDir": "migrations",
     "seederStorage": "sequelize"
   }
